@@ -465,7 +465,7 @@ function SelectRow({ label, value, options, onPick, display }) {
   }, className: "w-full text-left px-3 py-2 text-sm text-stone-700" }, o[display]))));
 }
 function ItemListScreen({ ctx, onBack }) {
-  const { data, setScreen } = ctx;
+  const { data, setScreen, setItemUnlocked } = ctx;
   const [q, setQ] = useState("");
   const [jenisTab, setJenisTab] = useState("barang");
   const list = data.barang.filter((b) => {
@@ -473,7 +473,11 @@ function ItemListScreen({ ctx, onBack }) {
     if (!q) return true;
     return b.nama.toLowerCase().includes(q.toLowerCase()) || (b.barcode || "").toLowerCase().includes(q.toLowerCase());
   });
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "sticky top-0 z-20 text-white", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-4 py-3.5" }, /* @__PURE__ */ React.createElement("button", { onClick: onBack, className: "p-1 -ml-1 rounded-full active:bg-white/10" }, /* @__PURE__ */ React.createElement(ChevronLeft, { size: 22 })), /* @__PURE__ */ React.createElement("h1", { className: "text-[17px] font-bold flex-1 truncate" }, "Kelola Item"), /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen({ name: "item-form", item: null, defaultJenis: jenisTab }), className: "p-1.5 bg-white/15 rounded-full" }, /* @__PURE__ */ React.createElement(Plus, { size: 18 }))), /* @__PURE__ */ React.createElement("div", { className: "flex px-4 gap-0" }, [{ key: "jasa", label: "Layanan" }, { key: "barang", label: "Item" }].map((t) => /* @__PURE__ */ React.createElement(
+  const exitMenu = () => {
+    if (data.security.lock_item_menu) setItemUnlocked(false);
+    onBack();
+  };
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "sticky top-0 z-20 text-white", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-4 py-3.5" }, /* @__PURE__ */ React.createElement("button", { onClick: exitMenu, className: "p-1 -ml-1 rounded-full active:bg-white/10" }, /* @__PURE__ */ React.createElement(ChevronLeft, { size: 22 })), /* @__PURE__ */ React.createElement("h1", { className: "text-[17px] font-bold flex-1 truncate" }, "Kelola Item"), /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen({ name: "item-form", item: null, defaultJenis: jenisTab }), className: "p-1.5 bg-white/15 rounded-full" }, /* @__PURE__ */ React.createElement(Plus, { size: 18 }))), /* @__PURE__ */ React.createElement("div", { className: "flex px-4 gap-0" }, [{ key: "jasa", label: "Layanan" }, { key: "barang", label: "Item" }].map((t) => /* @__PURE__ */ React.createElement(
     "button",
     {
       key: t.key,
@@ -488,8 +492,13 @@ function ItemListScreen({ ctx, onBack }) {
   }), list.length === 0 && /* @__PURE__ */ React.createElement(EmptyState, { icon: Package, title: jenisTab === "jasa" ? "Belum ada layanan" : "Belum ada item" })), list.length > 100 && /* @__PURE__ */ React.createElement("p", { className: "text-center text-xs text-stone-400 mt-3" }, "Menampilkan 100 dari ", list.length, ". Gunakan pencarian.")));
 }
 function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
-  const { update, notify } = ctx;
+  const { update, notify, setItemUnlocked, data } = ctx;
   const [form, setForm] = useState(item || { nama: "", jenis: defaultJenis || "barang", harga_eceran: "", harga_grosir: "", harga_beli: "", satuan: "pcs", stok: "", barcode: "", aktif: true });
+  const [scanOpen, setScanOpen] = useState(false);
+  const exitMenu = () => {
+    if (data.security.lock_item_menu) setItemUnlocked(false);
+    onBack();
+  };
   const save = () => {
     if (!form.nama.trim()) return notify("Nama item wajib diisi");
     const payload = {
@@ -506,14 +515,25 @@ function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
       return [payload, ...prev];
     });
     notify(item ? "Item diperbarui" : "Item ditambahkan");
-    onBack();
+    exitMenu();
   };
   const del = () => {
     update("barang", (prev) => prev.filter((b) => b.id !== item.id));
     notify("Item dihapus");
-    onBack();
+    exitMenu();
   };
-  return /* @__PURE__ */ React.createElement("div", { className: "pb-24" }, /* @__PURE__ */ React.createElement(TopBar, { title: item ? "Edit Item" : "Item Baru", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-4" }, /* @__PURE__ */ React.createElement(Field, { label: "Nama Item" }, /* @__PURE__ */ React.createElement("input", { value: form.nama, onChange: (e) => setForm((f) => ({ ...f, nama: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "Contoh: Oli Mesin" })), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, ["barang", "jasa"].map((j) => /* @__PURE__ */ React.createElement("button", { key: j, onClick: () => setForm((f) => ({ ...f, jenis: j })), className: `flex-1 py-2.5 rounded-xl text-sm font-semibold capitalize border ${form.jenis === j ? "text-white border-transparent" : "border-stone-200 text-stone-500"}`, style: form.jenis === j ? { background: BRAND.bg } : {} }, j))), /* @__PURE__ */ React.createElement(Field, { label: "Barcode / Kode" }, /* @__PURE__ */ React.createElement("input", { value: form.barcode || "", onChange: (e) => setForm((f) => ({ ...f, barcode: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "Kosongkan jika tidak ada" })), form.jenis === "barang" && /* @__PURE__ */ React.createElement(Field, { label: "Stok" }, /* @__PURE__ */ React.createElement("input", { type: "number", value: form.stok, onChange: (e) => setForm((f) => ({ ...f, stok: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "0" })), /* @__PURE__ */ React.createElement(Field, { label: "Satuan Item" }, /* @__PURE__ */ React.createElement("input", { value: form.satuan, onChange: (e) => setForm((f) => ({ ...f, satuan: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "pcs" })), /* @__PURE__ */ React.createElement(Field, { label: "Harga Beli" }, /* @__PURE__ */ React.createElement("input", { type: "number", value: form.harga_beli, onChange: (e) => setForm((f) => ({ ...f, harga_beli: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "0" })), /* @__PURE__ */ React.createElement(Field, { label: "Harga Jual (Eceran)" }, /* @__PURE__ */ React.createElement("input", { type: "number", value: form.harga_eceran, onChange: (e) => setForm((f) => ({ ...f, harga_eceran: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "0" })), /* @__PURE__ */ React.createElement(Field, { label: "Harga Grosir" }, /* @__PURE__ */ React.createElement("input", { type: "number", value: form.harga_grosir, onChange: (e) => setForm((f) => ({ ...f, harga_grosir: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "Kosongkan jika sama dengan harga jual" }))), /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-0 left-0 right-0 bg-white border-t border-stone-100 p-4 flex gap-2", style: { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" } }, item && /* @__PURE__ */ React.createElement("button", { onClick: del, className: "px-4 rounded-2xl border border-rose-200 text-rose-500 font-semibold text-sm" }, "Hapus"), /* @__PURE__ */ React.createElement("button", { onClick: save, className: "flex-1 rounded-2xl py-3.5 font-bold text-white active:scale-[0.98] transition", style: { background: BRAND.bg } }, "Simpan")));
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-24" }, /* @__PURE__ */ React.createElement(TopBar, { title: item ? "Edit Item" : "Item Baru", onBack: exitMenu }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-4" }, /* @__PURE__ */ React.createElement(Field, { label: "Nama Item" }, /* @__PURE__ */ React.createElement("input", { value: form.nama, onChange: (e) => setForm((f) => ({ ...f, nama: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "Contoh: Oli Mesin" })), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, ["barang", "jasa"].map((j) => /* @__PURE__ */ React.createElement("button", { key: j, onClick: () => setForm((f) => ({ ...f, jenis: j })), className: `flex-1 py-2.5 rounded-xl text-sm font-semibold capitalize border ${form.jenis === j ? "text-white border-transparent" : "border-stone-200 text-stone-500"}`, style: form.jenis === j ? { background: BRAND.bg } : {} }, j))), /* @__PURE__ */ React.createElement(Field, { label: "Barcode / Kode" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("input", { value: form.barcode || "", onChange: (e) => setForm((f) => ({ ...f, barcode: e.target.value })), className: "flex-1 outline-none text-sm font-medium", placeholder: "Kosongkan jika tidak ada" }), /* @__PURE__ */ React.createElement("button", { onClick: () => setScanOpen(true), className: "p-1.5 rounded-lg text-white shrink-0", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Search, { size: 16 })))), scanOpen && /* @__PURE__ */ React.createElement(
+    ScannerModal,
+    {
+      title: "Scan Barcode Item",
+      onDetected: (code) => {
+        setForm((f) => ({ ...f, barcode: code }));
+        setScanOpen(false);
+        notify("Barcode terdeteksi");
+      },
+      onClose: () => setScanOpen(false)
+    }
+  ), form.jenis === "barang" && /* @__PURE__ */ React.createElement(Field, { label: "Stok" }, /* @__PURE__ */ React.createElement("input", { type: "number", value: form.stok, onChange: (e) => setForm((f) => ({ ...f, stok: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "0" })), /* @__PURE__ */ React.createElement(Field, { label: "Satuan Item" }, /* @__PURE__ */ React.createElement("input", { value: form.satuan, onChange: (e) => setForm((f) => ({ ...f, satuan: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "pcs" })), /* @__PURE__ */ React.createElement(Field, { label: "Harga Beli" }, /* @__PURE__ */ React.createElement("input", { type: "number", value: form.harga_beli, onChange: (e) => setForm((f) => ({ ...f, harga_beli: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "0" })), /* @__PURE__ */ React.createElement(Field, { label: "Harga Jual (Eceran)" }, /* @__PURE__ */ React.createElement("input", { type: "number", value: form.harga_eceran, onChange: (e) => setForm((f) => ({ ...f, harga_eceran: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "0" })), /* @__PURE__ */ React.createElement(Field, { label: "Harga Grosir" }, /* @__PURE__ */ React.createElement("input", { type: "number", value: form.harga_grosir, onChange: (e) => setForm((f) => ({ ...f, harga_grosir: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "Kosongkan jika sama dengan harga jual" }))), /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-0 left-0 right-0 bg-white border-t border-stone-100 p-4 flex gap-2", style: { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" } }, item && /* @__PURE__ */ React.createElement("button", { onClick: del, className: "px-4 rounded-2xl border border-rose-200 text-rose-500 font-semibold text-sm" }, "Hapus"), /* @__PURE__ */ React.createElement("button", { onClick: save, className: "flex-1 rounded-2xl py-3.5 font-bold text-white active:scale-[0.98] transition", style: { background: BRAND.bg } }, "Simpan")));
 }
 function Field({ label, children }) {
   return /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-xl border border-stone-200 px-3.5 py-2.5" }, /* @__PURE__ */ React.createElement("label", { className: "text-[11px] font-semibold text-stone-400 uppercase" }, label), /* @__PURE__ */ React.createElement("div", { className: "mt-0.5" }, children));
