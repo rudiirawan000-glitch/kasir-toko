@@ -36,8 +36,6 @@ window.addEventListener("error", function (e) {
 
 <script>
 
-// window.storage tidak lagi dipakai untuk data toko (sudah pindah ke Supabase),
-// tapi disiapkan sebagai fallback aman jika ada kode lain yang memanggilnya.
 const PREFIX = "kasir:";
 window.storage = window.storage || {
   async get(key, _shared) {
@@ -311,7 +309,7 @@ function KasirApp() {
 function ScreenRouter({ screen, ctx }) {
   const back = () => ctx.setScreen(null);
   if (screen.name === "item-list") return /* @__PURE__ */ React.createElement(ItemListScreen, { ctx, onBack: back, pickMode: screen.pickMode });
-  if (screen.name === "item-form") return /* @__PURE__ */ React.createElement(ItemFormScreen, { ctx, onBack: back, item: screen.item });
+  if (screen.name === "item-form") return /* @__PURE__ */ React.createElement(ItemFormScreen, { ctx, onBack: back, item: screen.item, defaultJenis: screen.defaultJenis });
   if (screen.name === "checkout") return /* @__PURE__ */ React.createElement(CheckoutScreen, { ctx, onBack: back });
   if (screen.name === "trx-detail") return /* @__PURE__ */ React.createElement(TrxDetailScreen, { ctx, onBack: back, trx: screen.trx });
   if (screen.name === "pelanggan") return /* @__PURE__ */ React.createElement(PelangganScreen, { ctx, onBack: back });
@@ -469,15 +467,29 @@ function SelectRow({ label, value, options, onPick, display }) {
 function ItemListScreen({ ctx, onBack }) {
   const { data, setScreen } = ctx;
   const [q, setQ] = useState("");
-  const list = data.barang.filter((b) => !q || b.nama.toLowerCase().includes(q.toLowerCase()) || (b.barcode || "").toLowerCase().includes(q.toLowerCase()));
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(TopBar, { title: "Item / Layanan", onBack, right: /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen({ name: "item-form", item: null }), className: "p-1.5 bg-white/15 rounded-full" }, /* @__PURE__ */ React.createElement(Plus, { size: 18 })) }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-3 pb-2 sticky top-[52px] bg-[color:var(--cream)] z-10", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-xl flex items-center px-3 py-2.5 gap-2 border border-stone-200" }, /* @__PURE__ */ React.createElement(Search, { size: 16, className: "text-stone-400" }), /* @__PURE__ */ React.createElement("input", { value: q, onChange: (e) => setQ(e.target.value), placeholder: "Cari nama atau barcode...", className: "outline-none text-sm flex-1" }))), /* @__PURE__ */ React.createElement("div", { className: "px-4 pb-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden" }, list.slice(0, 100).map((item) => {
+  const [jenisTab, setJenisTab] = useState("barang");
+  const list = data.barang.filter((b) => {
+    if (b.jenis !== jenisTab) return false;
+    if (!q) return true;
+    return b.nama.toLowerCase().includes(q.toLowerCase()) || (b.barcode || "").toLowerCase().includes(q.toLowerCase());
+  });
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "sticky top-0 z-20 text-white", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-4 py-3.5" }, /* @__PURE__ */ React.createElement("button", { onClick: onBack, className: "p-1 -ml-1 rounded-full active:bg-white/10" }, /* @__PURE__ */ React.createElement(ChevronLeft, { size: 22 })), /* @__PURE__ */ React.createElement("h1", { className: "text-[17px] font-bold flex-1 truncate" }, "Kelola Item"), /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen({ name: "item-form", item: null, defaultJenis: jenisTab }), className: "p-1.5 bg-white/15 rounded-full" }, /* @__PURE__ */ React.createElement(Plus, { size: 18 }))), /* @__PURE__ */ React.createElement("div", { className: "flex px-4 gap-0" }, [{ key: "jasa", label: "Layanan" }, { key: "barang", label: "Item" }].map((t) => /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      key: t.key,
+      onClick: () => setJenisTab(t.key),
+      className: `flex-1 py-3 text-sm font-bold rounded-t-2xl transition-colors ${jenisTab === t.key ? "bg-[var(--cream)]" : "text-white/70"}`,
+      style: jenisTab === t.key ? { background: BRAND.cream, color: BRAND.bg } : {}
+    },
+    t.label
+  )))), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-3 pb-2 sticky top-[92px] z-10", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-xl flex items-center px-3 py-2.5 gap-2 border border-stone-200" }, /* @__PURE__ */ React.createElement(Search, { size: 16, className: "text-stone-400" }), /* @__PURE__ */ React.createElement("input", { value: q, onChange: (e) => setQ(e.target.value), placeholder: "Cari nama atau barcode...", className: "outline-none text-sm flex-1" }))), /* @__PURE__ */ React.createElement("div", { className: "px-4 pb-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden" }, list.slice(0, 100).map((item) => {
     var _a;
-    return /* @__PURE__ */ React.createElement("button", { key: item.id, onClick: () => setScreen({ name: "item-form", item }), className: "w-full flex items-center justify-between px-4 py-3 text-left" }, /* @__PURE__ */ React.createElement("div", { className: "min-w-0 flex-1" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700 truncate" }, item.nama), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-0.5 flex-wrap" }, /* @__PURE__ */ React.createElement(Badge, { tone: item.jenis === "jasa" ? "green" : "default" }, item.jenis === "jasa" ? "Jasa" : "Barang"), item.jenis === "barang" && /* @__PURE__ */ React.createElement("span", { className: "text-[11px] text-stone-400" }, "Stok ", (_a = item.stok) != null ? _a : 0), item.barcode && /* @__PURE__ */ React.createElement("span", { className: "text-[11px] text-stone-400" }, "#", item.barcode))), /* @__PURE__ */ React.createElement("div", { className: "text-right shrink-0 ml-2" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold", style: { color: BRAND.bg } }, rupiah(item.harga_eceran)), item.harga_grosir !== item.harga_eceran && /* @__PURE__ */ React.createElement("p", { className: "text-[11px] text-stone-400" }, "Grosir ", rupiah(item.harga_grosir))));
-  }), list.length === 0 && /* @__PURE__ */ React.createElement(EmptyState, { icon: Package, title: "Item tidak ditemukan" })), list.length > 100 && /* @__PURE__ */ React.createElement("p", { className: "text-center text-xs text-stone-400 mt-3" }, "Menampilkan 100 dari ", list.length, " item. Gunakan pencarian.")));
+    return /* @__PURE__ */ React.createElement("button", { key: item.id, onClick: () => setScreen({ name: "item-form", item }), className: "w-full flex items-center justify-between px-4 py-3 text-left" }, /* @__PURE__ */ React.createElement("div", { className: "min-w-0 flex-1" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700 truncate" }, item.nama), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-0.5 flex-wrap" }, item.jenis === "barang" && /* @__PURE__ */ React.createElement("span", { className: "text-[11px] text-stone-400" }, "Stok ", (_a = item.stok) != null ? _a : 0), item.barcode && /* @__PURE__ */ React.createElement("span", { className: "text-[11px] text-stone-400" }, "#", item.barcode))), /* @__PURE__ */ React.createElement("div", { className: "text-right shrink-0 ml-2" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold", style: { color: BRAND.bg } }, rupiah(item.harga_eceran)), item.harga_grosir !== item.harga_eceran && /* @__PURE__ */ React.createElement("p", { className: "text-[11px] text-stone-400" }, "Grosir ", rupiah(item.harga_grosir))));
+  }), list.length === 0 && /* @__PURE__ */ React.createElement(EmptyState, { icon: Package, title: jenisTab === "jasa" ? "Belum ada layanan" : "Belum ada item" })), list.length > 100 && /* @__PURE__ */ React.createElement("p", { className: "text-center text-xs text-stone-400 mt-3" }, "Menampilkan 100 dari ", list.length, ". Gunakan pencarian.")));
 }
-function ItemFormScreen({ ctx, onBack, item }) {
+function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
   const { update, notify } = ctx;
-  const [form, setForm] = useState(item || { nama: "", jenis: "barang", harga_eceran: "", harga_grosir: "", harga_beli: "", satuan: "pcs", stok: "", barcode: "", aktif: true });
+  const [form, setForm] = useState(item || { nama: "", jenis: defaultJenis || "barang", harga_eceran: "", harga_grosir: "", harga_beli: "", satuan: "pcs", stok: "", barcode: "", aktif: true });
   const save = () => {
     if (!form.nama.trim()) return notify("Nama item wajib diisi");
     const payload = {
