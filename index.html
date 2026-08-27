@@ -8,6 +8,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   html, body, #root { height: 100%; margin: 0; background: #ececea; }
   * { -webkit-tap-highlight-color: transparent; }
@@ -35,8 +36,10 @@ window.addEventListener("error", function (e) {
 
 <script>
 
+// window.storage tidak lagi dipakai untuk data toko (sudah pindah ke Supabase),
+// tapi disiapkan sebagai fallback aman jika ada kode lain yang memanggilnya.
 const PREFIX = "kasir:";
-window.storage = {
+window.storage = window.storage || {
   async get(key, _shared) {
     const raw = localStorage.getItem(PREFIX + key);
     if (raw === null) throw new Error(`Key "${key}" not found`);
@@ -45,17 +48,6 @@ window.storage = {
   async set(key, value, _shared) {
     localStorage.setItem(PREFIX + key, value);
     return { key, value, shared: !!_shared };
-  },
-  async delete(key, _shared) {
-    localStorage.removeItem(PREFIX + key);
-    return { key, deleted: true, shared: !!_shared };
-  },
-  async list(prefix = "", _shared) {
-    const keys = Object.keys(localStorage)
-      .filter((k) => k.startsWith(PREFIX))
-      .map((k) => k.slice(PREFIX.length))
-      .filter((k) => k.startsWith(prefix));
-    return { keys, prefix, shared: !!_shared };
   },
 };
 
@@ -115,45 +107,30 @@ const genKode = () => {
   const d = /* @__PURE__ */ new Date();
   return `TRX${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}${Math.floor(Math.random() * 9e3 + 1e3)}`;
 };
+const SUPABASE_URL = "https://uzpfryfhabtfpdxpctjg.supabase.co";
+const SUPABASE_KEY = "sb_publishable_4TBvNrM9b07hy7n-jRAcOQ_XOOTk1XH";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const KEYS = ["toko", "barang", "pelanggan", "mekanik", "metode_bayar", "transaksi", "pengeluaran", "security"];
-const ACCOUNTS_KEY = "kasir_accounts";
-async function loadAccounts() {
-  try {
-    const r = await window.storage.get(ACCOUNTS_KEY, false);
-    return r ? JSON.parse(r.value) : [];
-  } catch (e) {
-    return [];
-  }
-}
-async function saveAccounts(list) {
-  try {
-    await window.storage.set(ACCOUNTS_KEY, JSON.stringify(list), false);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-function scopedKey(account, key) {
-  return `${account}::${key}`;
-}
-async function loadAll(account) {
+async function loadAll(userId) {
   const out = {};
-  for (const k of KEYS) {
-    try {
-      const r = await window.storage.get(scopedKey(account, k), false);
-      out[k] = r ? JSON.parse(r.value) : null;
-    } catch (e) {
-      out[k] = null;
+  try {
+    const { data, error } = await sb.from("kasir_data").select("key,value").eq("user_id", userId);
+    if (error) throw error;
+    for (const row of data || []) {
+      out[row.key] = row.value;
     }
+  } catch (e) {
+    console.error("loadAll failed", e);
   }
   return out;
 }
-async function saveKey(account, key, value) {
+async function saveKey(userId, key, value) {
   try {
-    await window.storage.set(scopedKey(account, key), JSON.stringify(value), false);
+    const { error } = await sb.from("kasir_data").upsert({ user_id: userId, key, value, updated_at: (/* @__PURE__ */ new Date()).toISOString() }, { onConflict: "user_id,key" });
+    if (error) throw error;
     return true;
   } catch (e) {
-    console.error("storage set failed", key, e);
+    console.error("saveKey failed", key, e);
     return false;
   }
 }
@@ -191,10 +168,10 @@ function Toast({ msg }) {
   return /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-stone-900 text-white text-sm px-4 py-2.5 rounded-full shadow-lg animate-[fadeIn_0.2s_ease]" }, msg);
 }
 function KasirApp() {
-  const [accounts, setAccounts] = useState(null);
-  const [currentAccount, setCurrentAccount] = useState(null);
+  const [session, setSession] = useState(void 0);
+  const [authView, setAuthView] = useState("login");
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState("dashboard");
   const [screen, setScreen] = useState(null);
   const [cart, setCart] = useState([]);
@@ -207,15 +184,18 @@ function KasirApp() {
     setTimeout(() => setToast(""), 1800);
   };
   useEffect(() => {
-    (async () => {
-      const list = await loadAccounts();
-      setAccounts(list);
-      setLoading(false);
-    })();
+    sb.auth.getSession().then(({ data: { session: session2 } }) => setSession(session2));
+    const { data: listener } = sb.auth.onAuthStateChange((event, sess) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setAuthView("reset");
+      }
+      setSession(sess);
+    });
+    return () => listener.subscription.unsubscribe();
   }, []);
-  const loadAccountData = useCallback(async (username) => {
+  const loadAccountData = useCallback(async (userId) => {
     setLoading(true);
-    const loaded = await loadAll(username);
+    const loaded = await loadAll(userId);
     let needsSeed = !loaded.barang || !loaded.toko;
     let merged = { ...loaded };
     if (needsSeed) {
@@ -230,45 +210,50 @@ function KasirApp() {
         security: loaded.security || SEED.security
       };
       for (const k of KEYS) {
-        if (!loaded[k]) await saveKey(username, k, merged[k]);
+        if (!loaded[k]) await saveKey(userId, k, merged[k]);
       }
     }
     if (!merged.security) {
       merged.security = SEED.security;
-      await saveKey(username, "security", SEED.security);
+      await saveKey(userId, "security", SEED.security);
     }
     setData(merged);
-    setCurrentAccount(username);
     setLoading(false);
   }, []);
+  useEffect(() => {
+    if (session && session.user) {
+      loadAccountData(session.user.id);
+    } else {
+      setData(null);
+    }
+  }, [session, loadAccountData]);
   const update = useCallback((key, updater) => {
     setData((prev) => {
       const nextVal = typeof updater === "function" ? updater(prev[key]) : updater;
       const next = { ...prev, [key]: nextVal };
-      saveKey(currentAccount, key, nextVal);
+      if (session && session.user) saveKey(session.user.id, key, nextVal);
       return next;
     });
-  }, [currentAccount]);
-  const logout = () => {
-    setCurrentAccount(null);
+  }, [session]);
+  const logout = async () => {
+    await sb.auth.signOut();
     setData(null);
     setTab("dashboard");
     setScreen(null);
     setCart([]);
     setItemUnlocked(false);
   };
-  if (loading || accounts === null) {
+  if (session === void 0) {
     return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full flex items-center justify-center", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("div", { className: "text-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-10 h-10 border-4 border-stone-200 rounded-full animate-spin mx-auto mb-3", style: { borderTopColor: BRAND.bg } }), /* @__PURE__ */ React.createElement("p", { className: "text-stone-400 text-sm" }, "Memuat...")));
   }
-  if (!currentAccount || !data) {
-    return /* @__PURE__ */ React.createElement(
-      AccountGateScreen,
-      {
-        accounts,
-        setAccounts,
-        onLogin: loadAccountData
-      }
-    );
+  if (authView === "reset") {
+    return /* @__PURE__ */ React.createElement(ResetPasswordScreen, { notify, onDone: () => setAuthView("login") });
+  }
+  if (!session || !session.user || loading || !data) {
+    if (session && session.user && (loading || !data)) {
+      return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full flex items-center justify-center", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("div", { className: "text-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-10 h-10 border-4 border-stone-200 rounded-full animate-spin mx-auto mb-3", style: { borderTopColor: BRAND.bg } }), /* @__PURE__ */ React.createElement("p", { className: "text-stone-400 text-sm" }, "Memuat data toko...")));
+    }
+    return /* @__PURE__ */ React.createElement(AuthGateScreen, { view: authView, setView: setAuthView, notify });
   }
   const addToCart = (item, mode = "eceran") => {
     setCart((prev) => {
@@ -289,7 +274,7 @@ function KasirApp() {
       setScreen({ name: "item-list" });
     }
   };
-  const ctx = { data, update, notify, cart, setCart, cartMeta, setCartMeta, tab, setTab, screen, setScreen, addToCart, openItemMenu, itemUnlocked, setItemUnlocked, currentAccount, logout };
+  const ctx = { data, update, notify, cart, setCart, cartMeta, setCartMeta, tab, setTab, screen, setScreen, addToCart, openItemMenu, itemUnlocked, setItemUnlocked, userEmail: session.user.email, logout };
   return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full flex flex-col", style: { background: BRAND.cream, fontFamily: "'Inter','Helvetica Neue',sans-serif" } }, /* @__PURE__ */ React.createElement("style", null, `
         @keyframes fadeIn { from {opacity:0; transform: translate(-50%,8px)} to {opacity:1; transform: translate(-50%,0)} }
         * { -webkit-tap-highlight-color: transparent; }
@@ -701,9 +686,9 @@ function ImportDataScreen({ ctx, onBack }) {
       { label: "Pelanggan", value: `${(preview.pelanggan || []).length} orang` },
       { label: "Riwayat Transaksi", value: `${(preview.transaksi || []).length} transaksi` }
     ];
-    return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Konfirmasi Import", onBack: () => setPreview(null) }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4" }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-4 border", style: { background: "#fdf3ea", borderColor: BRAND.accent } }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700 mb-1" }, "\u26A0\uFE0F Perhatian"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-600 leading-relaxed" }, "Proses ini akan ", /* @__PURE__ */ React.createElement("b", null, "mengganti semua data"), " di akun ", /* @__PURE__ */ React.createElement("b", null, ctx.currentAccount), " saat ini dengan isi file backup ini. Data yang sudah ada sebelumnya akan hilang.")), /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-2" }, "Isi File Backup"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden mb-6" }, ringkasan.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, r.label), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-bold text-stone-700" }, r.value)))), /* @__PURE__ */ React.createElement("button", { onClick: confirmImport, className: "w-full rounded-2xl py-3.5 font-bold text-white active:scale-[0.98] transition", style: { background: BRAND.bg } }, "Ya, Restore Data Sekarang")));
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Konfirmasi Import", onBack: () => setPreview(null) }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4" }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-4 border", style: { background: "#fdf3ea", borderColor: BRAND.accent } }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700 mb-1" }, "\u26A0\uFE0F Perhatian"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-600 leading-relaxed" }, "Proses ini akan ", /* @__PURE__ */ React.createElement("b", null, "mengganti semua data"), " di akun ", /* @__PURE__ */ React.createElement("b", null, ctx.userEmail), " saat ini dengan isi file backup ini. Data yang sudah ada sebelumnya akan hilang.")), /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-2" }, "Isi File Backup"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden mb-6" }, ringkasan.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, r.label), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-bold text-stone-700" }, r.value)))), /* @__PURE__ */ React.createElement("button", { onClick: confirmImport, className: "w-full rounded-2xl py-3.5 font-bold text-white active:scale-[0.98] transition", style: { background: BRAND.bg } }, "Ya, Restore Data Sekarang")));
   }
-  return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Import / Export Backup", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-5" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-2" }, "Export"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-600 mb-3" }, "Simpan seluruh data akun ", /* @__PURE__ */ React.createElement("b", null, ctx.currentAccount), " saat ini jadi file, untuk dipindahkan ke akun/toko lain atau sebagai cadangan."), /* @__PURE__ */ React.createElement("button", { onClick: exportBackup, className: "w-full rounded-xl py-2.5 font-bold text-sm border", style: { borderColor: BRAND.bg, color: BRAND.bg } }, "Download File Backup"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-2" }, "Import"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-600 mb-3" }, "Pilih file backup (.json) untuk memulihkan data ke akun ini. Ini akan menimpa data yang ada saat ini."), /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Import / Export Backup", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-5" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-2" }, "Export"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-600 mb-3" }, "Simpan seluruh data akun ", /* @__PURE__ */ React.createElement("b", null, ctx.userEmail), " saat ini jadi file, untuk dipindahkan ke akun/toko lain atau sebagai cadangan."), /* @__PURE__ */ React.createElement("button", { onClick: exportBackup, className: "w-full rounded-xl py-2.5 font-bold text-sm border", style: { borderColor: BRAND.bg, color: BRAND.bg } }, "Download File Backup"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-2" }, "Import"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-600 mb-3" }, "Pilih file backup (.json) untuk memulihkan data ke akun ini. Ini akan menimpa data yang ada saat ini."), /* @__PURE__ */ React.createElement(
     "input",
     {
       ref: fileInputRef,
@@ -746,7 +731,7 @@ function Toggle({ label, value, onChange, disabled }) {
   return /* @__PURE__ */ React.createElement("button", { onClick: () => !disabled && onChange(!value), disabled, className: `w-full flex items-center justify-between py-3 ${disabled ? "opacity-40" : ""}` }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-700 text-left pr-3" }, label), /* @__PURE__ */ React.createElement("span", { className: `shrink-0 w-12 h-7 rounded-full relative transition-colors ${value ? "" : "bg-stone-200"}`, style: value ? { background: BRAND.bg } : {} }, /* @__PURE__ */ React.createElement("span", { className: `absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-all ${value ? "left-[22px]" : "left-0.5"}` })));
 }
 function SecurityScreen({ ctx, onBack }) {
-  const { data, update, notify, logout, currentAccount } = ctx;
+  const { data, update, notify, logout, userEmail } = ctx;
   const [pinBaru, setPinBaru] = useState("");
   const [lockItemMenu, setLockItemMenu] = useState(data.security.lock_item_menu);
   const hasPin = !!data.security.pin;
@@ -764,7 +749,7 @@ function SecurityScreen({ ctx, onBack }) {
     notify("Pengaturan keamanan disimpan");
     onBack();
   };
-  return /* @__PURE__ */ React.createElement("div", { className: "pb-24" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Keamanan", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-3.5" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-1" }, "Akun Aktif"), /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700" }, currentAccount)), /* @__PURE__ */ React.createElement(Field, { label: hasPin ? "Ubah PIN Menu (kosongkan jika tidak diubah)" : "Buat PIN Menu" }, /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-24" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Keamanan", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-3.5" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-1" }, "Akun Aktif"), /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700" }, userEmail)), /* @__PURE__ */ React.createElement(Field, { label: hasPin ? "Ubah PIN Menu (kosongkan jika tidak diubah)" : "Buat PIN Menu" }, /* @__PURE__ */ React.createElement(
     "input",
     {
       type: "tel",
@@ -888,62 +873,92 @@ function CustomerPickerScreen({ ctx, onBack }) {
   }
   return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(TopBar, { title: "Pilih Pelanggan", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-xl flex items-center px-3 py-2.5 gap-2 border border-stone-200 mb-3" }, /* @__PURE__ */ React.createElement(Search, { size: 16, className: "text-stone-400" }), /* @__PURE__ */ React.createElement("input", { value: q, onChange: (e) => setQ(e.target.value), placeholder: "Cari nama / no. HP...", className: "outline-none text-sm flex-1" })), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-2.5 mb-4" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setScanOpen(true), className: "flex items-center justify-center gap-2 py-3 rounded-2xl border font-semibold text-sm", style: { borderColor: BRAND.bg, color: BRAND.bg } }, /* @__PURE__ */ React.createElement(Search, { size: 16 }), " Scan Kartu"), /* @__PURE__ */ React.createElement("button", { onClick: () => setAddForm({ nama: "", no_hp: "", barcode: "", diskon_persen: "" }), className: "flex items-center justify-center gap-2 py-3 rounded-2xl text-white font-semibold text-sm", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Plus, { size: 16 }), " Pelanggan Baru")), /* @__PURE__ */ React.createElement("button", { onClick: clearPelanggan, className: "w-full text-left px-4 py-3 mb-3 rounded-2xl bg-white border border-stone-100 text-sm text-stone-500 font-medium" }, "Umum / Tanpa Pelanggan"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden" }, list.map((p) => /* @__PURE__ */ React.createElement("button", { key: p.id, onClick: () => pick(p), className: "w-full flex items-center justify-between px-4 py-3 text-left" }, /* @__PURE__ */ React.createElement("div", { className: "min-w-0" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700 truncate" }, p.nama), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400" }, p.no_hp || "-")), Number(p.diskon_persen) > 0 && /* @__PURE__ */ React.createElement(Badge, { tone: "amber" }, "Diskon ", p.diskon_persen, "%"))), list.length === 0 && /* @__PURE__ */ React.createElement(EmptyState, { icon: Users, title: "Pelanggan tidak ditemukan" }))), scanOpen && /* @__PURE__ */ React.createElement(ScannerModal, { title: "Scan Kartu Pelanggan", onDetected: handleScan, onClose: () => setScanOpen(false) }));
 }
-function AccountGateScreen({ accounts, setAccounts, onLogin }) {
-  const [mode, setMode] = useState(accounts.length === 0 ? "register" : "select");
-  const [selectedAccount, setSelectedAccount] = useState(null);
-  const [pin, setPin] = useState("");
+function AuthGateScreen({ view, setView, notify }) {
+  const [form, setForm] = useState({ storeName: "", email: "", password: "" });
   const [error, setError] = useState("");
-  const [regForm, setRegForm] = useState({ storeName: "", username: "", pin: "", pinConfirm: "" });
-  const pickAccount = (acc) => {
-    setSelectedAccount(acc);
-    setPin("");
+  const [info, setInfo] = useState("");
+  const [busy, setBusy] = useState(false);
+  const doLogin = async () => {
     setError("");
-    setMode("login");
+    setInfo("");
+    setBusy(true);
+    const { error: error2 } = await sb.auth.signInWithPassword({ email: form.email.trim(), password: form.password });
+    setBusy(false);
+    if (error2) setError(error2.message === "Invalid login credentials" ? "Email atau password salah" : error2.message);
   };
-  const doLogin = () => {
-    if (!selectedAccount) return;
-    if (pin !== selectedAccount.pin) {
-      setError("PIN salah, coba lagi");
-      return;
+  const doRegister = async () => {
+    setError("");
+    setInfo("");
+    if (!form.storeName.trim()) return setError("Nama toko wajib diisi");
+    if (!form.email.trim()) return setError("Email wajib diisi");
+    if (form.password.length < 6) return setError("Password minimal 6 karakter");
+    setBusy(true);
+    const { data, error: error2 } = await sb.auth.signUp({
+      email: form.email.trim(),
+      password: form.password,
+      options: { data: { store_name: form.storeName.trim() } }
+    });
+    setBusy(false);
+    if (error2) return setError(error2.message);
+    if (data.session) {
+      await saveKey(data.user.id, "toko", { nama: form.storeName.trim(), alamat: "", catatan: "", pesan_bawah: "Terima Kasih" });
+      notify("Toko berhasil dibuat");
+    } else {
+      setInfo("Akun berhasil dibuat. Silakan cek email kamu untuk konfirmasi sebelum login.");
+      setView("login");
     }
-    onLogin(selectedAccount.username);
   };
-  const doRegister = () => {
-    const storeName = regForm.storeName.trim();
-    const username = regForm.username.trim().toLowerCase().replace(/\s+/g, "");
-    if (!storeName) return setError("Nama toko wajib diisi");
-    if (!username) return setError("Nama akun/username wajib diisi");
-    if (accounts.some((a) => a.username === username)) return setError("Username sudah dipakai, pilih yang lain");
-    if (regForm.pin.length < 4) return setError("PIN minimal 4 digit");
-    if (regForm.pin !== regForm.pinConfirm) return setError("Konfirmasi PIN tidak sama");
+  const doForgot = async () => {
     setError("");
-    const newAccount = { username, pin: regForm.pin, storeName };
-    const nextAccounts = [...accounts, newAccount];
-    setAccounts(nextAccounts);
-    saveAccounts(nextAccounts);
-    onLogin(username);
+    setInfo("");
+    if (!form.email.trim()) return setError("Masukkan email akun kamu");
+    setBusy(true);
+    const { error: error2 } = await sb.auth.resetPasswordForEmail(form.email.trim(), { redirectTo: window.location.origin });
+    setBusy(false);
+    if (error2) return setError(error2.message);
+    setInfo("Link reset password sudah dikirim ke email kamu. Buka email itu untuk lanjut.");
   };
-  if (mode === "login" && selectedAccount) {
-    return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full flex flex-col items-center justify-center px-6", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setMode("select"), className: "absolute top-4 left-4 p-2 text-stone-400" }, /* @__PURE__ */ React.createElement(ChevronLeft, { size: 22 })), /* @__PURE__ */ React.createElement("div", { className: "w-16 h-16 rounded-2xl flex items-center justify-center mb-4", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Store, { size: 28, className: "text-white" })), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 text-lg mb-1" }, selectedAccount.storeName), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-400 mb-6" }, "Masukkan PIN akun (", selectedAccount.username, ")"), /* @__PURE__ */ React.createElement("div", { className: "flex gap-3 mb-8" }, Array.from({ length: selectedAccount.pin.length }).map((_, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: `w-3.5 h-3.5 rounded-full ${i < pin.length ? "" : "bg-stone-200"}`, style: i < pin.length ? { background: error ? "#e11d48" : BRAND.bg } : {} }))), error && /* @__PURE__ */ React.createElement("p", { className: "text-rose-500 text-xs font-semibold -mt-6 mb-6" }, error), /* @__PURE__ */ React.createElement(PinKeypad, { value: pin, onChange: (v) => {
+  if (view === "forgot") {
+    return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full overflow-y-auto px-6 py-10", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("button", { onClick: () => {
       setError("");
-      setPin(v);
-      if (v.length === selectedAccount.pin.length) setTimeout(() => {
-        if (v === selectedAccount.pin) onLogin(selectedAccount.username);
-        else {
-          setError("PIN salah, coba lagi");
-          setPin("");
-        }
-      }, 50);
-    }, maxLen: selectedAccount.pin.length }));
+      setInfo("");
+      setView("login");
+    }, className: "mb-4 p-1 text-stone-400 flex items-center gap-1 text-sm" }, /* @__PURE__ */ React.createElement(ChevronLeft, { size: 18 }), " Kembali"), /* @__PURE__ */ React.createElement("div", { className: "w-16 h-16 rounded-2xl flex items-center justify-center mb-4 mx-auto", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Store, { size: 28, className: "text-white" })), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 text-lg mb-1 text-center" }, "Lupa Password"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-400 mb-6 text-center max-w-sm mx-auto" }, "Masukkan email akun toko kamu, nanti dikirimkan link untuk membuat password baru."), /* @__PURE__ */ React.createElement("div", { className: "space-y-3 max-w-sm mx-auto" }, /* @__PURE__ */ React.createElement(Field, { label: "Email" }, /* @__PURE__ */ React.createElement("input", { type: "email", value: form.email, onChange: (e) => setForm((f) => ({ ...f, email: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "email@contoh.com" })), error && /* @__PURE__ */ React.createElement("p", { className: "text-rose-500 text-xs font-semibold text-center" }, error), info && /* @__PURE__ */ React.createElement("p", { className: "text-emerald-600 text-xs font-semibold text-center" }, info), /* @__PURE__ */ React.createElement("button", { onClick: doForgot, disabled: busy, className: "w-full rounded-2xl py-3.5 font-bold text-white mt-2 disabled:opacity-50", style: { background: BRAND.bg } }, busy ? "Mengirim..." : "Kirim Link Reset")));
   }
-  if (mode === "register") {
-    return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full overflow-y-auto px-6 py-10", style: { background: BRAND.cream } }, accounts.length > 0 && /* @__PURE__ */ React.createElement("button", { onClick: () => setMode("select"), className: "mb-4 p-1 text-stone-400 flex items-center gap-1 text-sm" }, /* @__PURE__ */ React.createElement(ChevronLeft, { size: 18 }), " Kembali"), /* @__PURE__ */ React.createElement("div", { className: "w-16 h-16 rounded-2xl flex items-center justify-center mb-4 mx-auto", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Store, { size: 28, className: "text-white" })), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 text-lg mb-1 text-center" }, accounts.length === 0 ? "Buat Toko Pertama" : "Tambah Toko Baru"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-400 mb-6 text-center" }, "Setiap toko punya data & stok sendiri-sendiri"), /* @__PURE__ */ React.createElement("div", { className: "space-y-3 max-w-sm mx-auto" }, /* @__PURE__ */ React.createElement(Field, { label: "Nama Toko" }, /* @__PURE__ */ React.createElement("input", { value: regForm.storeName, onChange: (e) => setRegForm((f) => ({ ...f, storeName: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "Contoh: Toko Sinar Jaya" })), /* @__PURE__ */ React.createElement(Field, { label: "Nama Akun / Username" }, /* @__PURE__ */ React.createElement("input", { value: regForm.username, onChange: (e) => setRegForm((f) => ({ ...f, username: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "Contoh: sinarjaya (tanpa spasi)" })), /* @__PURE__ */ React.createElement(Field, { label: "Buat PIN (4-6 digit)" }, /* @__PURE__ */ React.createElement("input", { type: "tel", inputMode: "numeric", value: regForm.pin, onChange: (e) => setRegForm((f) => ({ ...f, pin: e.target.value.replace(/\D/g, "").slice(0, 6) })), className: "w-full outline-none text-sm font-medium tracking-widest", placeholder: "1234" })), /* @__PURE__ */ React.createElement(Field, { label: "Konfirmasi PIN" }, /* @__PURE__ */ React.createElement("input", { type: "tel", inputMode: "numeric", value: regForm.pinConfirm, onChange: (e) => setRegForm((f) => ({ ...f, pinConfirm: e.target.value.replace(/\D/g, "").slice(0, 6) })), className: "w-full outline-none text-sm font-medium tracking-widest", placeholder: "1234" })), error && /* @__PURE__ */ React.createElement("p", { className: "text-rose-500 text-xs font-semibold text-center" }, error), /* @__PURE__ */ React.createElement("button", { onClick: doRegister, className: "w-full rounded-2xl py-3.5 font-bold text-white mt-2", style: { background: BRAND.bg } }, "Buat Toko")));
+  if (view === "register") {
+    return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full overflow-y-auto px-6 py-10", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("button", { onClick: () => {
+      setError("");
+      setInfo("");
+      setView("login");
+    }, className: "mb-4 p-1 text-stone-400 flex items-center gap-1 text-sm" }, /* @__PURE__ */ React.createElement(ChevronLeft, { size: 18 }), " Kembali"), /* @__PURE__ */ React.createElement("div", { className: "w-16 h-16 rounded-2xl flex items-center justify-center mb-4 mx-auto", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Store, { size: 28, className: "text-white" })), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 text-lg mb-1 text-center" }, "Buat Toko Baru"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-400 mb-6 text-center" }, "Data toko kamu tersimpan aman di server, bisa diakses dari HP mana saja"), /* @__PURE__ */ React.createElement("div", { className: "space-y-3 max-w-sm mx-auto" }, /* @__PURE__ */ React.createElement(Field, { label: "Nama Toko" }, /* @__PURE__ */ React.createElement("input", { value: form.storeName, onChange: (e) => setForm((f) => ({ ...f, storeName: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "Contoh: Toko Sinar Jaya" })), /* @__PURE__ */ React.createElement(Field, { label: "Email" }, /* @__PURE__ */ React.createElement("input", { type: "email", value: form.email, onChange: (e) => setForm((f) => ({ ...f, email: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "email@contoh.com" })), /* @__PURE__ */ React.createElement(Field, { label: "Password (min 6 karakter)" }, /* @__PURE__ */ React.createElement("input", { type: "password", value: form.password, onChange: (e) => setForm((f) => ({ ...f, password: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022" })), error && /* @__PURE__ */ React.createElement("p", { className: "text-rose-500 text-xs font-semibold text-center" }, error), info && /* @__PURE__ */ React.createElement("p", { className: "text-emerald-600 text-xs font-semibold text-center" }, info), /* @__PURE__ */ React.createElement("button", { onClick: doRegister, disabled: busy, className: "w-full rounded-2xl py-3.5 font-bold text-white mt-2 disabled:opacity-50", style: { background: BRAND.bg } }, busy ? "Memproses..." : "Buat Toko")));
   }
-  return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full overflow-y-auto px-6 py-10", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("div", { className: "w-16 h-16 rounded-2xl flex items-center justify-center mb-4 mx-auto", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Store, { size: 28, className: "text-white" })), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 text-lg mb-1 text-center" }, "Pilih Toko"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-400 mb-6 text-center" }, "Kelola beberapa toko dari satu perangkat"), /* @__PURE__ */ React.createElement("div", { className: "max-w-sm mx-auto space-y-2 mb-4" }, accounts.map((acc) => /* @__PURE__ */ React.createElement("button", { key: acc.username, onClick: () => pickAccount(acc), className: "w-full bg-white rounded-2xl p-4 border border-stone-100 shadow-sm flex items-center gap-3 text-left" }, /* @__PURE__ */ React.createElement("div", { className: "w-10 h-10 rounded-full flex items-center justify-center shrink-0", style: { background: "#f5e9dd" } }, /* @__PURE__ */ React.createElement(Store, { size: 18, style: { color: BRAND.bg } })), /* @__PURE__ */ React.createElement("div", { className: "min-w-0 flex-1" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700 truncate" }, acc.storeName), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400" }, acc.username)), /* @__PURE__ */ React.createElement(ChevronRight, { size: 18, className: "text-stone-300" })))), /* @__PURE__ */ React.createElement("div", { className: "max-w-sm mx-auto" }, /* @__PURE__ */ React.createElement("button", { onClick: () => {
-    setRegForm({ storeName: "", username: "", pin: "", pinConfirm: "" });
+  return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full overflow-y-auto px-6 py-10", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("div", { className: "w-16 h-16 rounded-2xl flex items-center justify-center mb-4 mx-auto", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Store, { size: 28, className: "text-white" })), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 text-lg mb-1 text-center" }, "Masuk ke Toko Kamu"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-400 mb-6 text-center" }, "Kasir Toko"), /* @__PURE__ */ React.createElement("div", { className: "space-y-3 max-w-sm mx-auto" }, /* @__PURE__ */ React.createElement(Field, { label: "Email" }, /* @__PURE__ */ React.createElement("input", { type: "email", value: form.email, onChange: (e) => setForm((f) => ({ ...f, email: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "email@contoh.com" })), /* @__PURE__ */ React.createElement(Field, { label: "Password" }, /* @__PURE__ */ React.createElement("input", { type: "password", value: form.password, onChange: (e) => setForm((f) => ({ ...f, password: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022" })), error && /* @__PURE__ */ React.createElement("p", { className: "text-rose-500 text-xs font-semibold text-center" }, error), info && /* @__PURE__ */ React.createElement("p", { className: "text-emerald-600 text-xs font-semibold text-center" }, info), /* @__PURE__ */ React.createElement("button", { onClick: doLogin, disabled: busy, className: "w-full rounded-2xl py-3.5 font-bold text-white mt-2 disabled:opacity-50", style: { background: BRAND.bg } }, busy ? "Masuk..." : "Masuk"), /* @__PURE__ */ React.createElement("button", { onClick: () => {
     setError("");
-    setMode("register");
-  }, className: "w-full rounded-2xl py-3.5 font-bold border flex items-center justify-center gap-2", style: { borderColor: BRAND.bg, color: BRAND.bg } }, /* @__PURE__ */ React.createElement(Plus, { size: 18 }), " Tambah Toko Baru")));
+    setInfo("");
+    setView("forgot");
+  }, className: "w-full text-center text-xs font-semibold py-1", style: { color: BRAND.bg } }, "Lupa Password?"), /* @__PURE__ */ React.createElement("div", { className: "pt-3 border-t border-stone-200 mt-3" }, /* @__PURE__ */ React.createElement("button", { onClick: () => {
+    setError("");
+    setInfo("");
+    setView("register");
+  }, className: "w-full rounded-2xl py-3 font-bold border", style: { borderColor: BRAND.bg, color: BRAND.bg } }, "Buat Toko Baru"))));
+}
+function ResetPasswordScreen({ notify, onDone }) {
+  const [pw, setPw] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    setError("");
+    if (pw.length < 6) return setError("Password minimal 6 karakter");
+    if (pw !== pwConfirm) return setError("Konfirmasi password tidak sama");
+    setBusy(true);
+    const { error: error2 } = await sb.auth.updateUser({ password: pw });
+    setBusy(false);
+    if (error2) return setError(error2.message);
+    notify("Password berhasil diganti");
+    onDone();
+  };
+  return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full overflow-y-auto px-6 py-10", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("div", { className: "w-16 h-16 rounded-2xl flex items-center justify-center mb-4 mx-auto", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Store, { size: 28, className: "text-white" })), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 text-lg mb-1 text-center" }, "Buat Password Baru"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-400 mb-6 text-center" }, "untuk akun toko kamu"), /* @__PURE__ */ React.createElement("div", { className: "space-y-3 max-w-sm mx-auto" }, /* @__PURE__ */ React.createElement(Field, { label: "Password Baru" }, /* @__PURE__ */ React.createElement("input", { type: "password", value: pw, onChange: (e) => setPw(e.target.value), className: "w-full outline-none text-sm font-medium", placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022" })), /* @__PURE__ */ React.createElement(Field, { label: "Konfirmasi Password Baru" }, /* @__PURE__ */ React.createElement("input", { type: "password", value: pwConfirm, onChange: (e) => setPwConfirm(e.target.value), className: "w-full outline-none text-sm font-medium", placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022" })), error && /* @__PURE__ */ React.createElement("p", { className: "text-rose-500 text-xs font-semibold text-center" }, error), /* @__PURE__ */ React.createElement("button", { onClick: submit, disabled: busy, className: "w-full rounded-2xl py-3.5 font-bold text-white mt-2 disabled:opacity-50", style: { background: BRAND.bg } }, busy ? "Menyimpan..." : "Simpan Password Baru")));
 }
 
 </script>
