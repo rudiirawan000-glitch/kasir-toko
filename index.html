@@ -764,10 +764,15 @@ function ImportDataScreen({ ctx, onBack }) {
   const confirmImport = async () => {
     let barangArr = preview.barang || [];
     const needUpload = barangArr.filter((b) => b.gambar && b.gambar.startsWith("data:"));
+    let photoFailCount = 0;
+    const { data: userData, error: userErr } = await sb.auth.getUser();
+    if (userErr || !(userData == null ? void 0 : userData.user)) {
+      setErrorMsg("Sesi login bermasalah, coba refresh halaman dan login ulang.");
+      return;
+    }
+    const userId = userData.user.id;
     if (needUpload.length > 0) {
       setImportProgress({ done: 0, total: needUpload.length });
-      const { data: userData } = await sb.auth.getUser();
-      const userId = userData.user.id;
       barangArr = [...barangArr];
       let doneCount = 0;
       const chunkSize = 5;
@@ -780,19 +785,35 @@ function ImportDataScreen({ ctx, onBack }) {
               const blob = await res.blob();
               const path = `${userId}/${item.id}-${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
               const { error } = await sb.storage.from("item-photos").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
-              if (!error) {
-                const { data: pub } = sb.storage.from("item-photos").getPublicUrl(path);
-                const idx = barangArr.findIndex((b) => b.id === item.id);
-                if (idx >= 0) barangArr[idx] = { ...barangArr[idx], gambar: pub.publicUrl };
-              }
+              if (error) throw error;
+              const { data: pub } = sb.storage.from("item-photos").getPublicUrl(path);
+              const idx = barangArr.findIndex((b) => b.id === item.id);
+              if (idx >= 0) barangArr[idx] = { ...barangArr[idx], gambar: pub.publicUrl };
             } catch (e) {
-              console.error("upload foto gagal", item.id, e);
+              photoFailCount++;
+              const idx = barangArr.findIndex((b) => b.id === item.id);
+              if (idx >= 0) barangArr[idx] = { ...barangArr[idx], gambar: "" };
             }
             doneCount++;
             setImportProgress({ done: doneCount, total: needUpload.length });
           })
         );
       }
+    }
+    setImportProgress({ done: needUpload.length, total: needUpload.length, saving: true });
+    const results = await Promise.all([
+      saveKey(userId, "toko", preview.toko || data.toko),
+      saveKey(userId, "barang", barangArr),
+      saveKey(userId, "pelanggan", preview.pelanggan || []),
+      saveKey(userId, "mekanik", preview.mekanik || []),
+      saveKey(userId, "metode_bayar", preview.metode_bayar || data.metode_bayar),
+      saveKey(userId, "transaksi", preview.transaksi || []),
+      saveKey(userId, "pengeluaran", preview.pengeluaran || [])
+    ]);
+    setImportProgress(null);
+    if (!results.every(Boolean)) {
+      setErrorMsg("Gagal menyimpan sebagian data ke server (mungkin koneksi terputus atau data terlalu besar). Coba lagi.");
+      return;
     }
     update("toko", preview.toko || data.toko);
     update("barang", barangArr);
@@ -801,13 +822,17 @@ function ImportDataScreen({ ctx, onBack }) {
     update("metode_bayar", preview.metode_bayar || data.metode_bayar);
     update("transaksi", preview.transaksi || []);
     update("pengeluaran", preview.pengeluaran || []);
-    setImportProgress(null);
+    if (photoFailCount > 0) {
+      notify(`Data tersimpan, tapi ${photoFailCount} foto gagal diupload (cek storage bucket sudah dibuat)`);
+    } else {
+      notify("Data berhasil di-restore");
+    }
     setDone(true);
     notify("Data berhasil di-restore");
   };
   if (importProgress) {
-    const pct = Math.round(importProgress.done / importProgress.total * 100);
-    return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Import Backup" }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-16 flex flex-col items-center text-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-14 h-14 border-4 border-stone-200 rounded-full animate-spin mb-5", style: { borderTopColor: BRAND.bg } }), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 mb-1" }, "Mengupload foto produk..."), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-500 mb-4" }, importProgress.done, " dari ", importProgress.total, " foto"), /* @__PURE__ */ React.createElement("div", { className: "w-full max-w-xs h-2.5 rounded-full bg-stone-100 overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "h-full rounded-full transition-all", style: { width: `${pct}%`, background: BRAND.accent } })), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 mt-4" }, "Jangan tutup halaman ini dulu")));
+    const pct = importProgress.total > 0 ? Math.round(importProgress.done / importProgress.total * 100) : 100;
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Import Backup" }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-16 flex flex-col items-center text-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-14 h-14 border-4 border-stone-200 rounded-full animate-spin mb-5", style: { borderTopColor: BRAND.bg } }), importProgress.saving ? /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 mb-1" }, "Menyimpan data ke server...") : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 mb-1" }, "Mengupload foto produk..."), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-500 mb-4" }, importProgress.done, " dari ", importProgress.total, " foto"), /* @__PURE__ */ React.createElement("div", { className: "w-full max-w-xs h-2.5 rounded-full bg-stone-100 overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "h-full rounded-full transition-all", style: { width: `${pct}%`, background: BRAND.accent } }))), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 mt-4" }, "Jangan tutup halaman ini dulu")));
   }
   if (done) {
     return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Import Backup", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-10 flex flex-col items-center text-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4" }, /* @__PURE__ */ React.createElement(Check, { size: 28, className: "text-emerald-600" })), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 text-lg mb-1" }, "Data berhasil dipulihkan"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-500 mb-6" }, "Semua data dari file backup sudah masuk ke akun ini."), /* @__PURE__ */ React.createElement("button", { onClick: () => {
@@ -822,7 +847,7 @@ function ImportDataScreen({ ctx, onBack }) {
       { label: "Pelanggan", value: `${(preview.pelanggan || []).length} orang` },
       { label: "Riwayat Transaksi", value: `${(preview.transaksi || []).length} transaksi` }
     ];
-    return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Konfirmasi Import", onBack: () => setPreview(null) }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4" }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-4 border", style: { background: "#fdf3ea", borderColor: BRAND.accent } }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700 mb-1" }, "\u26A0\uFE0F Perhatian"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-600 leading-relaxed" }, "Proses ini akan ", /* @__PURE__ */ React.createElement("b", null, "mengganti semua data"), " di akun ", /* @__PURE__ */ React.createElement("b", null, ctx.userEmail), " saat ini dengan isi file backup ini. Data yang sudah ada sebelumnya akan hilang.")), /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-2" }, "Isi File Backup"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden mb-6" }, ringkasan.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, r.label), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-bold text-stone-700" }, r.value)))), /* @__PURE__ */ React.createElement("button", { onClick: confirmImport, className: "w-full rounded-2xl py-3.5 font-bold text-white active:scale-[0.98] transition", style: { background: BRAND.bg } }, "Ya, Restore Data Sekarang")));
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Konfirmasi Import", onBack: () => setPreview(null) }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4" }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-4 border", style: { background: "#fdf3ea", borderColor: BRAND.accent } }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700 mb-1" }, "\u26A0\uFE0F Perhatian"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-600 leading-relaxed" }, "Proses ini akan ", /* @__PURE__ */ React.createElement("b", null, "mengganti semua data"), " di akun ", /* @__PURE__ */ React.createElement("b", null, ctx.userEmail), " saat ini dengan isi file backup ini. Data yang sudah ada sebelumnya akan hilang.")), /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-2" }, "Isi File Backup"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden mb-6" }, ringkasan.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, r.label), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-bold text-stone-700" }, r.value)))), /* @__PURE__ */ React.createElement("button", { onClick: confirmImport, className: "w-full rounded-2xl py-3.5 font-bold text-white active:scale-[0.98] transition", style: { background: BRAND.bg } }, "Ya, Restore Data Sekarang"), errorMsg && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-rose-500 mt-3 text-center" }, errorMsg)));
   }
   return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Import / Export Backup", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-5" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-2" }, "Export"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-600 mb-3" }, "Simpan seluruh data akun ", /* @__PURE__ */ React.createElement("b", null, ctx.userEmail), " saat ini jadi file, untuk dipindahkan ke akun/toko lain atau sebagai cadangan."), /* @__PURE__ */ React.createElement("button", { onClick: exportBackup, className: "w-full rounded-xl py-2.5 font-bold text-sm border", style: { borderColor: BRAND.bg, color: BRAND.bg } }, "Download File Backup"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-2" }, "Import"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-600 mb-3" }, "Pilih file backup (.json) untuk memulihkan data ke akun ini. Ini akan menimpa data yang ada saat ini."), /* @__PURE__ */ React.createElement(
     "input",
