@@ -91,10 +91,11 @@ const Icons = {
   TrendingUp: Icon([P({ points: "23,6 13.5,15.5 8.5,10.5 1,18", key: 1 }), P({ points: "17,6 23,6 23,12", key: 2 })]),
   Receipt: Icon([Pa({ d: "M4 2h16v20l-3-2-3 2-3-2-3 2-3-2-1 2z", key: 1 }), L({ x1: 8, y1: 7, x2: 16, y2: 7, key: 2 }), L({ x1: 8, y1: 11, x2: 16, y2: 11, key: 3 }), L({ x1: 8, y1: 15, x2: 13, y2: 15, key: 4 })]),
   Store: Icon([Pa({ d: "M3 9l1.5-5h15L21 9", key: 1 }), Pa({ d: "M3 9v10a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9", key: 2 }), Pa({ d: "M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0", key: 3 })]),
-  CreditCard: Icon([R({ x: 1, y: 4, width: 22, height: 16, rx: 2, key: 1 }), L({ x1: 1, y1: 10, x2: 23, y2: 10, key: 2 })])
+  CreditCard: Icon([R({ x: 1, y: 4, width: 22, height: 16, rx: 2, key: 1 }), L({ x1: 1, y1: 10, x2: 23, y2: 10, key: 2 })]),
+  Camera: Icon([Pa({ d: "M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z", key: 1 }), C({ cx: 12, cy: 13, r: 4, key: 2 })])
 };
 const { useState, useEffect, useMemo, useCallback } = React;
-const { Menu, X, Search, Plus, Minus, Trash2, ShoppingCart, History, BarChart3, Users, Wrench, Settings, ChevronLeft, ChevronRight, Check, Package, Tag, Printer, TrendingUp, Receipt, Store, CreditCard } = Icons;
+const { Menu, X, Search, Plus, Minus, Trash2, ShoppingCart, History, BarChart3, Users, Wrench, Settings, ChevronLeft, ChevronRight, Check, Package, Tag, Printer, TrendingUp, Receipt, Store, CreditCard, Camera } = Icons;
 const rupiah = (n) => {
   const v = Math.round(Number(n) || 0);
   return "Rp" + v.toLocaleString("id-ID");
@@ -403,7 +404,7 @@ function PosScreen({ ctx }) {
   return /* @__PURE__ */ React.createElement("div", { className: "pb-2" }, /* @__PURE__ */ React.createElement("div", { className: "sticky top-0 z-20 text-white px-4 pt-4 pb-3", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-3" }, /* @__PURE__ */ React.createElement("h1", { className: "text-[17px] font-bold" }, "Transaksi Baru"), /* @__PURE__ */ React.createElement("button", { onClick: () => setScanOpen(true), className: "flex items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-full text-xs font-semibold" }, /* @__PURE__ */ React.createElement(Search, { size: 14 }), " Scan Barcode")), /* @__PURE__ */ React.createElement("div", { className: "bg-white/15 rounded-xl flex items-center px-3 py-2.5 gap-2" }, /* @__PURE__ */ React.createElement(Search, { size: 17, className: "text-white/70" }), /* @__PURE__ */ React.createElement("input", { value: q, onChange: (e) => setQ(e.target.value), placeholder: "Cari item / layanan...", className: "bg-transparent outline-none text-sm text-white placeholder-white/50 flex-1" })), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mt-3" }, ["semua", "barang", "jasa"].map((f) => /* @__PURE__ */ React.createElement("button", { key: f, onClick: () => setFilter(f), className: `px-3 py-1.5 rounded-full text-xs font-semibold capitalize ${filter === f ? "bg-white" : "bg-white/15 text-white"}`, style: filter === f ? { color: BRAND.bg } : {} }, f)))), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-3" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen({ name: "customer-picker" }), className: "w-full bg-white rounded-2xl p-3.5 border border-stone-100 shadow-sm flex items-center gap-3 mb-3" }, /* @__PURE__ */ React.createElement("div", { className: "w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center shrink-0" }, /* @__PURE__ */ React.createElement(Users, { size: 18, className: "text-stone-400" })), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0 text-left" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700" }, selectedPelanggan ? selectedPelanggan.nama : "Pelanggan"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 truncate" }, selectedPelanggan ? selectedPelanggan.no_hp || "Tanpa nomor HP" : "Silahkan pilih pelanggan (opsional)")), /* @__PURE__ */ React.createElement("span", { className: "text-xs font-bold px-3 py-1.5 rounded-full text-white shrink-0", style: { background: BRAND.bg } }, selectedPelanggan ? "Ganti" : "Cari"))), /* @__PURE__ */ React.createElement("div", { className: "px-4 grid grid-cols-2 gap-2.5" }, list.map((item) => {
     var _a;
     const inCart = cart.filter((c) => c.barang_id === item.id).reduce((s, c) => s + c.qty, 0);
-    return /* @__PURE__ */ React.createElement("button", { key: item.id, onClick: () => addToCart(item), className: "text-left bg-white rounded-2xl p-3 border border-stone-100 shadow-sm relative active:scale-[0.97] transition" }, inCart > 0 && /* @__PURE__ */ React.createElement("span", { className: "absolute top-2 right-2 w-5 h-5 rounded-full text-white text-[11px] font-bold flex items-center justify-center", style: { background: BRAND.accent } }, inCart), /* @__PURE__ */ React.createElement("div", { className: "w-8 h-8 rounded-lg flex items-center justify-center mb-2", style: { background: item.jenis === "jasa" ? "#e6f0ea" : "#f5e9dd" } }, item.jenis === "jasa" ? /* @__PURE__ */ React.createElement(Wrench, { size: 15, style: { color: "#3d7a56" } }) : /* @__PURE__ */ React.createElement(Package, { size: 15, style: { color: BRAND.bg } })), /* @__PURE__ */ React.createElement("p", { className: "text-[13px] font-semibold text-stone-700 leading-tight line-clamp-2 min-h-[32px]" }, item.nama), /* @__PURE__ */ React.createElement("p", { className: "text-[13px] font-bold mt-1", style: { color: BRAND.bg } }, rupiah(item.harga_eceran)), item.jenis === "barang" && /* @__PURE__ */ React.createElement("p", { className: "text-[10.5px] text-stone-400 mt-0.5" }, "Stok: ", (_a = item.stok) != null ? _a : 0));
+    return /* @__PURE__ */ React.createElement("button", { key: item.id, onClick: () => addToCart(item), className: "text-left bg-white rounded-2xl p-3 border border-stone-100 shadow-sm relative active:scale-[0.97] transition" }, inCart > 0 && /* @__PURE__ */ React.createElement("span", { className: "absolute top-2 right-2 w-5 h-5 rounded-full text-white text-[11px] font-bold flex items-center justify-center", style: { background: BRAND.accent } }, inCart), /* @__PURE__ */ React.createElement("div", { className: "w-8 h-8 rounded-lg flex items-center justify-center mb-2 overflow-hidden", style: { background: item.jenis === "jasa" ? "#e6f0ea" : "#f5e9dd" } }, item.gambar ? /* @__PURE__ */ React.createElement("img", { src: item.gambar, alt: "", className: "w-full h-full object-cover" }) : item.jenis === "jasa" ? /* @__PURE__ */ React.createElement(Wrench, { size: 15, style: { color: "#3d7a56" } }) : /* @__PURE__ */ React.createElement(Package, { size: 15, style: { color: BRAND.bg } })), /* @__PURE__ */ React.createElement("p", { className: "text-[13px] font-semibold text-stone-700 leading-tight line-clamp-2 min-h-[32px]" }, item.nama), /* @__PURE__ */ React.createElement("p", { className: "text-[13px] font-bold mt-1", style: { color: BRAND.bg } }, rupiah(item.harga_eceran)), item.jenis === "barang" && /* @__PURE__ */ React.createElement("p", { className: "text-[10.5px] text-stone-400 mt-0.5" }, "Stok: ", (_a = item.stok) != null ? _a : 0));
   }), list.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "col-span-2" }, /* @__PURE__ */ React.createElement(EmptyState, { icon: Search, title: "Tidak ditemukan", hint: "Coba kata kunci lain" }))), cart.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-16 left-0 right-0 z-30 px-4 pb-2" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen({ name: "checkout" }), className: "w-full rounded-2xl shadow-xl px-4 py-3.5 flex items-center justify-between text-white active:scale-[0.98] transition", style: { background: BRAND.accent } }, /* @__PURE__ */ React.createElement("span", { className: "flex items-center gap-2 font-semibold text-sm" }, /* @__PURE__ */ React.createElement(ShoppingCart, { size: 18 }), " ", cartQty, " item"), /* @__PURE__ */ React.createElement("span", { className: "font-bold" }, rupiah(cartTotal), " ", /* @__PURE__ */ React.createElement(ChevronRight, { size: 16, className: "inline" })))), scanOpen && /* @__PURE__ */ React.createElement(ScannerModal, { title: "Scan Barcode Item", onDetected: handleScanResult, onClose: () => setScanOpen(false) }));
 }
 function CheckoutScreen({ ctx, onBack }) {
@@ -520,16 +521,39 @@ function ItemListScreen({ ctx, onBack }) {
     t.label
   )))), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-3 pb-2 sticky top-[92px] z-10", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-xl flex items-center px-3 py-2.5 gap-2 border border-stone-200" }, /* @__PURE__ */ React.createElement(Search, { size: 16, className: "text-stone-400" }), /* @__PURE__ */ React.createElement("input", { value: q, onChange: (e) => setQ(e.target.value), placeholder: "Cari nama atau barcode...", className: "outline-none text-sm flex-1" }))), /* @__PURE__ */ React.createElement("div", { className: "px-4 pb-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden" }, list.slice(0, 100).map((item) => {
     var _a;
-    return /* @__PURE__ */ React.createElement("button", { key: item.id, onClick: () => setScreen({ name: "item-form", item }), className: "w-full flex items-center justify-between px-4 py-3 text-left" }, /* @__PURE__ */ React.createElement("div", { className: "min-w-0 flex-1" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700 truncate" }, item.nama), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-0.5 flex-wrap" }, item.jenis === "barang" && /* @__PURE__ */ React.createElement("span", { className: "text-[11px] text-stone-400" }, "Stok ", (_a = item.stok) != null ? _a : 0), item.barcode && /* @__PURE__ */ React.createElement("span", { className: "text-[11px] text-stone-400" }, "#", item.barcode))), /* @__PURE__ */ React.createElement("div", { className: "text-right shrink-0 ml-2" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold", style: { color: BRAND.bg } }, rupiah(item.harga_eceran)), item.harga_grosir !== item.harga_eceran && /* @__PURE__ */ React.createElement("p", { className: "text-[11px] text-stone-400" }, "Grosir ", rupiah(item.harga_grosir))));
+    return /* @__PURE__ */ React.createElement("button", { key: item.id, onClick: () => setScreen({ name: "item-form", item }), className: "w-full flex items-center gap-3 px-3 py-3 text-left" }, /* @__PURE__ */ React.createElement("div", { className: "w-14 h-14 rounded-xl shrink-0 overflow-hidden bg-stone-100 flex items-center justify-center" }, item.gambar ? /* @__PURE__ */ React.createElement("img", { src: item.gambar, alt: "", className: "w-full h-full object-cover" }) : /* @__PURE__ */ React.createElement(Camera, { size: 18, className: "text-stone-300" })), /* @__PURE__ */ React.createElement("div", { className: "min-w-0 flex-1" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700 leading-snug" }, item.nama), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-1 flex-wrap" }, item.jenis === "barang" && /* @__PURE__ */ React.createElement("span", { className: "text-[11px] text-stone-400" }, "Stok ", (_a = item.stok) != null ? _a : 0), item.barcode && /* @__PURE__ */ React.createElement("span", { className: "text-[11px] text-stone-400" }, "#", item.barcode)), /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold mt-1", style: { color: BRAND.bg } }, rupiah(item.harga_eceran)), item.harga_grosir !== item.harga_eceran && /* @__PURE__ */ React.createElement("p", { className: "text-[11px] text-stone-400" }, "Grosir ", rupiah(item.harga_grosir))));
   }), list.length === 0 && /* @__PURE__ */ React.createElement(EmptyState, { icon: Package, title: jenisTab === "jasa" ? "Belum ada layanan" : "Belum ada item" })), list.length > 100 && /* @__PURE__ */ React.createElement("p", { className: "text-center text-xs text-stone-400 mt-3" }, "Menampilkan 100 dari ", list.length, ". Gunakan pencarian.")));
 }
 function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
   const { update, notify, setItemUnlocked, data } = ctx;
-  const [form, setForm] = useState(item || { nama: "", jenis: defaultJenis || "barang", harga_eceran: "", harga_grosir: "", harga_beli: "", satuan: "pcs", stok: "", barcode: "", aktif: true });
+  const [form, setForm] = useState(item || { nama: "", jenis: defaultJenis || "barang", harga_eceran: "", harga_grosir: "", harga_beli: "", satuan: "pcs", stok: "", barcode: "", gambar: "", aktif: true });
   const [scanOpen, setScanOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const photoInputRef = React.useRef(null);
   const exitMenu = () => {
     if (data.security.lock_item_menu) setItemUnlocked(false);
     onBack();
+  };
+  const handlePhoto = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    const localPreview = URL.createObjectURL(file);
+    setForm((f) => ({ ...f, gambar: localPreview }));
+    try {
+      const { data: userData } = await sb.auth.getUser();
+      const userId = userData.user.id;
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await sb.storage.from("item-photos").upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+      if (error) throw error;
+      const { data: pub } = sb.storage.from("item-photos").getPublicUrl(path);
+      setForm((f) => ({ ...f, gambar: pub.publicUrl }));
+      notify("Foto berhasil diupload");
+    } catch (e) {
+      notify("Gagal upload foto: " + (e.message || "coba lagi"));
+    } finally {
+      setUploading(false);
+    }
   };
   const save = () => {
     if (!form.nama.trim()) return notify("Nama item wajib diisi");
@@ -554,7 +578,17 @@ function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
     notify("Item dihapus");
     exitMenu();
   };
-  return /* @__PURE__ */ React.createElement("div", { className: "pb-24" }, /* @__PURE__ */ React.createElement(TopBar, { title: item ? "Edit Item" : "Item Baru", onBack: exitMenu }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-4" }, /* @__PURE__ */ React.createElement(Field, { label: "Nama Item" }, /* @__PURE__ */ React.createElement("input", { value: form.nama, onChange: (e) => setForm((f) => ({ ...f, nama: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "Contoh: Oli Mesin" })), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, ["barang", "jasa"].map((j) => /* @__PURE__ */ React.createElement("button", { key: j, onClick: () => setForm((f) => ({ ...f, jenis: j })), className: `flex-1 py-2.5 rounded-xl text-sm font-semibold capitalize border ${form.jenis === j ? "text-white border-transparent" : "border-stone-200 text-stone-500"}`, style: form.jenis === j ? { background: BRAND.bg } : {} }, j))), /* @__PURE__ */ React.createElement(Field, { label: "Barcode / Kode" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("input", { value: form.barcode || "", onChange: (e) => setForm((f) => ({ ...f, barcode: e.target.value })), className: "flex-1 outline-none text-sm font-medium", placeholder: "Kosongkan jika tidak ada" }), /* @__PURE__ */ React.createElement("button", { onClick: () => setScanOpen(true), className: "p-1.5 rounded-lg text-white shrink-0", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Search, { size: 16 })))), scanOpen && /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-24" }, /* @__PURE__ */ React.createElement(TopBar, { title: item ? "Edit Item" : "Item Baru", onBack: exitMenu }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-4" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { className: "text-[11px] font-semibold text-stone-400 uppercase block mb-1.5" }, "Foto Item"), /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      ref: photoInputRef,
+      type: "file",
+      accept: "image/*",
+      capture: "environment",
+      className: "hidden",
+      onChange: (e) => e.target.files[0] && handlePhoto(e.target.files[0])
+    }
+  ), form.gambar ? /* @__PURE__ */ React.createElement("div", { className: "relative w-28 h-28" }, /* @__PURE__ */ React.createElement("img", { src: form.gambar, alt: "", className: "w-28 h-28 rounded-2xl object-cover border border-stone-200" }), uploading && /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-6 h-6 border-2 border-white/40 rounded-full animate-spin", style: { borderTopColor: "white" } })), /* @__PURE__ */ React.createElement("button", { onClick: () => setForm((f) => ({ ...f, gambar: "" })), className: "absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white shadow flex items-center justify-center border border-stone-200" }, /* @__PURE__ */ React.createElement(X, { size: 13, className: "text-rose-500" })), /* @__PURE__ */ React.createElement("button", { onClick: () => photoInputRef.current.click(), className: "absolute bottom-1 right-1 w-7 h-7 rounded-full flex items-center justify-center text-white shadow", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Camera, { size: 13 }))) : /* @__PURE__ */ React.createElement("button", { onClick: () => photoInputRef.current.click(), disabled: uploading, className: "w-28 h-28 rounded-2xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center gap-1 text-stone-400" }, uploading ? /* @__PURE__ */ React.createElement("div", { className: "w-6 h-6 border-2 border-stone-300 rounded-full animate-spin", style: { borderTopColor: BRAND.bg } }) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Camera, { size: 22 }), /* @__PURE__ */ React.createElement("span", { className: "text-[10px] font-semibold" }, "Tambah Foto")))), /* @__PURE__ */ React.createElement(Field, { label: "Nama Item" }, /* @__PURE__ */ React.createElement("input", { value: form.nama, onChange: (e) => setForm((f) => ({ ...f, nama: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "Contoh: Oli Mesin" })), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, ["barang", "jasa"].map((j) => /* @__PURE__ */ React.createElement("button", { key: j, onClick: () => setForm((f) => ({ ...f, jenis: j })), className: `flex-1 py-2.5 rounded-xl text-sm font-semibold capitalize border ${form.jenis === j ? "text-white border-transparent" : "border-stone-200 text-stone-500"}`, style: form.jenis === j ? { background: BRAND.bg } : {} }, j))), /* @__PURE__ */ React.createElement(Field, { label: "Barcode / Kode" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("input", { value: form.barcode || "", onChange: (e) => setForm((f) => ({ ...f, barcode: e.target.value })), className: "flex-1 outline-none text-sm font-medium", placeholder: "Kosongkan jika tidak ada" }), /* @__PURE__ */ React.createElement("button", { onClick: () => setScanOpen(true), className: "p-1.5 rounded-lg text-white shrink-0", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Search, { size: 16 })))), scanOpen && /* @__PURE__ */ React.createElement(
     ScannerModal,
     {
       title: "Scan Barcode Item",
@@ -686,6 +720,7 @@ function ImportDataScreen({ ctx, onBack }) {
   const [done, setDone] = useState(false);
   const [preview, setPreview] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [importProgress, setImportProgress] = useState(null);
   const fileInputRef = React.useRef(null);
   const exportBackup = () => {
     const backup = {
@@ -726,17 +761,54 @@ function ImportDataScreen({ ctx, onBack }) {
     };
     reader.readAsText(file);
   };
-  const confirmImport = () => {
+  const confirmImport = async () => {
+    let barangArr = preview.barang || [];
+    const needUpload = barangArr.filter((b) => b.gambar && b.gambar.startsWith("data:"));
+    if (needUpload.length > 0) {
+      setImportProgress({ done: 0, total: needUpload.length });
+      const { data: userData } = await sb.auth.getUser();
+      const userId = userData.user.id;
+      barangArr = [...barangArr];
+      let doneCount = 0;
+      const chunkSize = 5;
+      for (let i = 0; i < needUpload.length; i += chunkSize) {
+        const chunk = needUpload.slice(i, i + chunkSize);
+        await Promise.all(
+          chunk.map(async (item) => {
+            try {
+              const res = await fetch(item.gambar);
+              const blob = await res.blob();
+              const path = `${userId}/${item.id}-${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+              const { error } = await sb.storage.from("item-photos").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+              if (!error) {
+                const { data: pub } = sb.storage.from("item-photos").getPublicUrl(path);
+                const idx = barangArr.findIndex((b) => b.id === item.id);
+                if (idx >= 0) barangArr[idx] = { ...barangArr[idx], gambar: pub.publicUrl };
+              }
+            } catch (e) {
+              console.error("upload foto gagal", item.id, e);
+            }
+            doneCount++;
+            setImportProgress({ done: doneCount, total: needUpload.length });
+          })
+        );
+      }
+    }
     update("toko", preview.toko || data.toko);
-    update("barang", preview.barang || []);
+    update("barang", barangArr);
     update("pelanggan", preview.pelanggan || []);
     update("mekanik", preview.mekanik || []);
     update("metode_bayar", preview.metode_bayar || data.metode_bayar);
     update("transaksi", preview.transaksi || []);
     update("pengeluaran", preview.pengeluaran || []);
+    setImportProgress(null);
     setDone(true);
     notify("Data berhasil di-restore");
   };
+  if (importProgress) {
+    const pct = Math.round(importProgress.done / importProgress.total * 100);
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Import Backup" }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-16 flex flex-col items-center text-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-14 h-14 border-4 border-stone-200 rounded-full animate-spin mb-5", style: { borderTopColor: BRAND.bg } }), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 mb-1" }, "Mengupload foto produk..."), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-500 mb-4" }, importProgress.done, " dari ", importProgress.total, " foto"), /* @__PURE__ */ React.createElement("div", { className: "w-full max-w-xs h-2.5 rounded-full bg-stone-100 overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "h-full rounded-full transition-all", style: { width: `${pct}%`, background: BRAND.accent } })), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 mt-4" }, "Jangan tutup halaman ini dulu")));
+  }
   if (done) {
     return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Import Backup", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-10 flex flex-col items-center text-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4" }, /* @__PURE__ */ React.createElement(Check, { size: 28, className: "text-emerald-600" })), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 text-lg mb-1" }, "Data berhasil dipulihkan"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-500 mb-6" }, "Semua data dari file backup sudah masuk ke akun ini."), /* @__PURE__ */ React.createElement("button", { onClick: () => {
       onBack();
