@@ -231,6 +231,31 @@ function KasirApp() {
       setData(null);
     }
   }, [session, loadAccountData]);
+  const skipPushRef = React.useRef(false);
+  const historyInitRef = React.useRef(false);
+  useEffect(() => {
+    if (!session || !session.user || !data) return;
+    if (!historyInitRef.current) {
+      historyInitRef.current = true;
+      window.history.replaceState({ screen, tab }, "");
+      return;
+    }
+    if (skipPushRef.current) {
+      skipPushRef.current = false;
+      return;
+    }
+    window.history.pushState({ screen, tab }, "");
+  }, [screen, tab, session, data]);
+  useEffect(() => {
+    const onPopState = (e) => {
+      const state = e.state || { screen: null, tab: "dashboard" };
+      skipPushRef.current = true;
+      setScreen(state.screen || null);
+      setTab(state.tab || "dashboard");
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
   const update = useCallback((key, updater) => {
     setData((prev) => {
       const nextVal = typeof updater === "function" ? updater(prev[key]) : updater;
@@ -246,6 +271,7 @@ function KasirApp() {
     setScreen(null);
     setCart([]);
     setItemUnlocked(false);
+    historyInitRef.current = false;
   };
   if (session === void 0) {
     return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full flex items-center justify-center", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("div", { className: "text-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-10 h-10 border-4 border-stone-200 rounded-full animate-spin mx-auto mb-3", style: { borderTopColor: BRAND.bg } }), /* @__PURE__ */ React.createElement("p", { className: "text-stone-400 text-sm" }, "Memuat...")));
@@ -313,7 +339,7 @@ function KasirApp() {
   })), /* @__PURE__ */ React.createElement(Toast, { msg: toast }));
 }
 function ScreenRouter({ screen, ctx }) {
-  const back = () => ctx.setScreen(null);
+  const back = () => window.history.back();
   if (screen.name === "item-list") return /* @__PURE__ */ React.createElement(ItemListScreen, { ctx, onBack: back, pickMode: screen.pickMode });
   if (screen.name === "item-form") return /* @__PURE__ */ React.createElement(ItemFormScreen, { ctx, onBack: back, item: screen.item, defaultJenis: screen.defaultJenis });
   if (screen.name === "checkout") return /* @__PURE__ */ React.createElement(CheckoutScreen, { ctx, onBack: back });
