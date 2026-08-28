@@ -529,18 +529,32 @@ function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
   const [form, setForm] = useState(item || { nama: "", jenis: defaultJenis || "barang", harga_eceran: "", harga_grosir: "", harga_beli: "", satuan: "pcs", stok: "", barcode: "", gambar: "", aktif: true });
   const [scanOpen, setScanOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [photoError, setPhotoError] = useState("");
   const photoInputRef = React.useRef(null);
   const exitMenu = () => {
     if (data.security.lock_item_menu) setItemUnlocked(false);
     onBack();
   };
   const handlePhoto = async (file) => {
-    if (!file) return;
+    setPhotoError("");
+    if (!file) {
+      notify("Tidak ada file yang dipilih");
+      return;
+    }
     setUploading(true);
-    const localPreview = URL.createObjectURL(file);
-    setForm((f) => ({ ...f, gambar: localPreview }));
     try {
-      const { data: userData } = await sb.auth.getUser();
+      const localPreview = URL.createObjectURL(file);
+      setForm((f) => ({ ...f, gambar: localPreview }));
+    } catch (e) {
+      const msg = "Gagal menampilkan preview foto: " + (e.message || "coba lagi");
+      notify(msg);
+      setPhotoError(msg);
+      setUploading(false);
+      return;
+    }
+    try {
+      const { data: userData, error: userErr } = await sb.auth.getUser();
+      if (userErr || !(userData == null ? void 0 : userData.user)) throw new Error((userErr == null ? void 0 : userErr.message) || "Sesi login bermasalah");
       const userId = userData.user.id;
       const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
       const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -550,7 +564,9 @@ function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
       setForm((f) => ({ ...f, gambar: pub.publicUrl }));
       notify("Foto berhasil diupload");
     } catch (e) {
-      notify("Gagal upload foto: " + (e.message || "coba lagi"));
+      const msg = "Gagal upload foto ke server: " + (e.message || JSON.stringify(e) || "coba lagi");
+      notify(msg);
+      setPhotoError(msg);
     } finally {
       setUploading(false);
     }
@@ -586,9 +602,13 @@ function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
       accept: "image/*",
       capture: "environment",
       className: "hidden",
-      onChange: (e) => e.target.files[0] && handlePhoto(e.target.files[0])
+      onChange: (e) => {
+        const file = e.target.files[0];
+        e.target.value = "";
+        if (file) handlePhoto(file);
+      }
     }
-  ), form.gambar ? /* @__PURE__ */ React.createElement("div", { className: "relative w-28 h-28" }, /* @__PURE__ */ React.createElement("img", { src: form.gambar, alt: "", className: "w-28 h-28 rounded-2xl object-cover border border-stone-200" }), uploading && /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-6 h-6 border-2 border-white/40 rounded-full animate-spin", style: { borderTopColor: "white" } })), /* @__PURE__ */ React.createElement("button", { onClick: () => setForm((f) => ({ ...f, gambar: "" })), className: "absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white shadow flex items-center justify-center border border-stone-200" }, /* @__PURE__ */ React.createElement(X, { size: 13, className: "text-rose-500" })), /* @__PURE__ */ React.createElement("button", { onClick: () => photoInputRef.current.click(), className: "absolute bottom-1 right-1 w-7 h-7 rounded-full flex items-center justify-center text-white shadow", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Camera, { size: 13 }))) : /* @__PURE__ */ React.createElement("button", { onClick: () => photoInputRef.current.click(), disabled: uploading, className: "w-28 h-28 rounded-2xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center gap-1 text-stone-400" }, uploading ? /* @__PURE__ */ React.createElement("div", { className: "w-6 h-6 border-2 border-stone-300 rounded-full animate-spin", style: { borderTopColor: BRAND.bg } }) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Camera, { size: 22 }), /* @__PURE__ */ React.createElement("span", { className: "text-[10px] font-semibold" }, "Tambah Foto")))), /* @__PURE__ */ React.createElement(Field, { label: "Nama Item" }, /* @__PURE__ */ React.createElement("input", { value: form.nama, onChange: (e) => setForm((f) => ({ ...f, nama: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "Contoh: Oli Mesin" })), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, ["barang", "jasa"].map((j) => /* @__PURE__ */ React.createElement("button", { key: j, onClick: () => setForm((f) => ({ ...f, jenis: j })), className: `flex-1 py-2.5 rounded-xl text-sm font-semibold capitalize border ${form.jenis === j ? "text-white border-transparent" : "border-stone-200 text-stone-500"}`, style: form.jenis === j ? { background: BRAND.bg } : {} }, j))), /* @__PURE__ */ React.createElement(Field, { label: "Barcode / Kode" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("input", { value: form.barcode || "", onChange: (e) => setForm((f) => ({ ...f, barcode: e.target.value })), className: "flex-1 outline-none text-sm font-medium", placeholder: "Kosongkan jika tidak ada" }), /* @__PURE__ */ React.createElement("button", { onClick: () => setScanOpen(true), className: "p-1.5 rounded-lg text-white shrink-0", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Search, { size: 16 })))), scanOpen && /* @__PURE__ */ React.createElement(
+  ), form.gambar ? /* @__PURE__ */ React.createElement("div", { className: "relative w-28 h-28" }, /* @__PURE__ */ React.createElement("img", { src: form.gambar, alt: "", className: "w-28 h-28 rounded-2xl object-cover border border-stone-200" }), uploading && /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-6 h-6 border-2 border-white/40 rounded-full animate-spin", style: { borderTopColor: "white" } })), /* @__PURE__ */ React.createElement("button", { onClick: () => setForm((f) => ({ ...f, gambar: "" })), className: "absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white shadow flex items-center justify-center border border-stone-200" }, /* @__PURE__ */ React.createElement(X, { size: 13, className: "text-rose-500" })), /* @__PURE__ */ React.createElement("button", { onClick: () => photoInputRef.current.click(), className: "absolute bottom-1 right-1 w-7 h-7 rounded-full flex items-center justify-center text-white shadow", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Camera, { size: 13 }))) : /* @__PURE__ */ React.createElement("button", { onClick: () => photoInputRef.current.click(), disabled: uploading, className: "w-28 h-28 rounded-2xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center gap-1 text-stone-400" }, uploading ? /* @__PURE__ */ React.createElement("div", { className: "w-6 h-6 border-2 border-stone-300 rounded-full animate-spin", style: { borderTopColor: BRAND.bg } }) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Camera, { size: 22 }), /* @__PURE__ */ React.createElement("span", { className: "text-[10px] font-semibold" }, "Tambah Foto"))), photoError && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-rose-500 mt-2 max-w-xs" }, photoError)), /* @__PURE__ */ React.createElement(Field, { label: "Nama Item" }, /* @__PURE__ */ React.createElement("input", { value: form.nama, onChange: (e) => setForm((f) => ({ ...f, nama: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "Contoh: Oli Mesin" })), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, ["barang", "jasa"].map((j) => /* @__PURE__ */ React.createElement("button", { key: j, onClick: () => setForm((f) => ({ ...f, jenis: j })), className: `flex-1 py-2.5 rounded-xl text-sm font-semibold capitalize border ${form.jenis === j ? "text-white border-transparent" : "border-stone-200 text-stone-500"}`, style: form.jenis === j ? { background: BRAND.bg } : {} }, j))), /* @__PURE__ */ React.createElement(Field, { label: "Barcode / Kode" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("input", { value: form.barcode || "", onChange: (e) => setForm((f) => ({ ...f, barcode: e.target.value })), className: "flex-1 outline-none text-sm font-medium", placeholder: "Kosongkan jika tidak ada" }), /* @__PURE__ */ React.createElement("button", { onClick: () => setScanOpen(true), className: "p-1.5 rounded-lg text-white shrink-0", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Search, { size: 16 })))), scanOpen && /* @__PURE__ */ React.createElement(
     ScannerModal,
     {
       title: "Scan Barcode Item",
