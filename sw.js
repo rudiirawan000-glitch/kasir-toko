@@ -1,4 +1,4 @@
-const CACHE_NAME = "kasir-toko-v1";
+const CACHE_NAME = "kasir-toko-v2";
 const CORE_ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (event) => {
@@ -17,13 +17,26 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Network-first untuk HTML (biar selalu dapat update terbaru saat online),
-// fallback ke cache kalau offline. Cache-first untuk aset lain (JS/CSS/gambar).
+// PENTING: hanya file aplikasi sendiri (HTML/JS/ikon di domain ini) yang boleh
+// di-cache. Semua request ke domain lain (Supabase, CDN, dsb) SELALU harus
+// diambil langsung dari internet, tidak pernah dari cache -- karena isinya
+// data toko yang berubah-ubah (item, transaksi, foto). Kalau ini ikut
+// di-cache, refresh halaman akan menampilkan data BASI walau data asli di
+// server sudah benar ter-update.
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
 
+  const isSameOrigin = new URL(req.url).origin === self.location.origin;
+  if (!isSameOrigin) {
+    // Request ke luar (Supabase API, CDN, dsb): selalu ambil langsung dari
+    // jaringan, jangan pernah dijawab dari cache Service Worker ini.
+    return;
+  }
+
   if (req.mode === "navigate" || req.destination === "document") {
+    // Network-first untuk HTML: selalu ambil versi terbaru saat online,
+    // fallback ke cache hanya kalau benar-benar offline.
     event.respondWith(
       fetch(req)
         .then((res) => {
@@ -36,6 +49,8 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Aset statis milik aplikasi sendiri (ikon, manifest): cache-first, aman
+  // karena isinya tidak berubah-ubah seperti data toko.
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;
