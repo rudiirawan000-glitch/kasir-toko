@@ -8,7 +8,7 @@
 <link rel="manifest" href="./manifest.json" />
 <link rel="icon" href="./icon-192.png" />
 <link rel="apple-touch-icon" href="./icon-192.png" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Kasir Toko" />
 <script src="https://cdn.tailwindcss.com"></script>
@@ -531,11 +531,13 @@ function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
   const [uploading, setUploading] = useState(false);
   const [photoError, setPhotoError] = useState("");
   const photoInputRef = React.useRef(null);
+  const uploadPromiseRef = React.useRef(null);
+  const gambarRef = React.useRef(form.gambar || "");
   const exitMenu = () => {
     if (data.security.lock_item_menu) setItemUnlocked(false);
     onBack();
   };
-  const handlePhoto = async (file) => {
+  const handlePhoto = (file) => {
     setPhotoError("");
     if (!file) {
       notify("Tidak ada file yang dipilih");
@@ -544,6 +546,7 @@ function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
     setUploading(true);
     try {
       const localPreview = URL.createObjectURL(file);
+      gambarRef.current = localPreview;
       setForm((f) => ({ ...f, gambar: localPreview }));
     } catch (e) {
       const msg = "Gagal menampilkan preview foto: " + (e.message || "coba lagi");
@@ -552,29 +555,44 @@ function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
       setUploading(false);
       return;
     }
-    try {
-      const { data: userData, error: userErr } = await sb.auth.getUser();
-      if (userErr || !(userData == null ? void 0 : userData.user)) throw new Error((userErr == null ? void 0 : userErr.message) || "Sesi login bermasalah");
-      const userId = userData.user.id;
-      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-      const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await sb.storage.from("item-photos").upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
-      if (error) throw error;
-      const { data: pub } = sb.storage.from("item-photos").getPublicUrl(path);
-      setForm((f) => ({ ...f, gambar: pub.publicUrl }));
-      notify("Foto berhasil diupload");
-    } catch (e) {
-      const msg = "Gagal upload foto ke server: " + (e.message || JSON.stringify(e) || "coba lagi");
-      notify(msg);
-      setPhotoError(msg);
-    } finally {
-      setUploading(false);
-    }
+    const task = (async () => {
+      try {
+        const { data: userData, error: userErr } = await sb.auth.getUser();
+        if (userErr || !(userData == null ? void 0 : userData.user)) throw new Error((userErr == null ? void 0 : userErr.message) || "Sesi login bermasalah");
+        const userId = userData.user.id;
+        const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+        const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await sb.storage.from("item-photos").upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+        if (error) throw error;
+        const { data: pub } = sb.storage.from("item-photos").getPublicUrl(path);
+        gambarRef.current = pub.publicUrl;
+        setForm((f) => ({ ...f, gambar: pub.publicUrl }));
+        notify("Foto berhasil diupload");
+      } catch (e) {
+        const msg = "Gagal upload foto ke server: " + (e.message || JSON.stringify(e) || "coba lagi");
+        notify(msg);
+        setPhotoError(msg);
+        gambarRef.current = "";
+        setForm((f) => ({ ...f, gambar: "" }));
+      } finally {
+        setUploading(false);
+      }
+    })();
+    uploadPromiseRef.current = task;
   };
-  const save = () => {
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
     if (!form.nama.trim()) return notify("Nama item wajib diisi");
+    if (uploadPromiseRef.current) {
+      setSaving(true);
+      notify("Menunggu upload foto selesai...");
+      await uploadPromiseRef.current;
+      uploadPromiseRef.current = null;
+    }
+    setSaving(false);
     const payload = {
       ...form,
+      gambar: gambarRef.current,
       id: form.id || uid(),
       harga_eceran: Number(form.harga_eceran) || 0,
       harga_grosir: Number(form.harga_grosir) || Number(form.harga_eceran) || 0,
@@ -619,7 +637,7 @@ function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
       },
       onClose: () => setScanOpen(false)
     }
-  ), form.jenis === "barang" && /* @__PURE__ */ React.createElement(Field, { label: "Stok" }, /* @__PURE__ */ React.createElement("input", { type: "number", value: form.stok, onChange: (e) => setForm((f) => ({ ...f, stok: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "0" })), /* @__PURE__ */ React.createElement(Field, { label: "Satuan Item" }, /* @__PURE__ */ React.createElement("input", { value: form.satuan, onChange: (e) => setForm((f) => ({ ...f, satuan: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "pcs" })), /* @__PURE__ */ React.createElement(Field, { label: "Harga Beli" }, /* @__PURE__ */ React.createElement("input", { type: "number", value: form.harga_beli, onChange: (e) => setForm((f) => ({ ...f, harga_beli: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "0" })), /* @__PURE__ */ React.createElement(Field, { label: "Harga Jual (Eceran)" }, /* @__PURE__ */ React.createElement("input", { type: "number", value: form.harga_eceran, onChange: (e) => setForm((f) => ({ ...f, harga_eceran: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "0" })), /* @__PURE__ */ React.createElement(Field, { label: "Harga Grosir" }, /* @__PURE__ */ React.createElement("input", { type: "number", value: form.harga_grosir, onChange: (e) => setForm((f) => ({ ...f, harga_grosir: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "Kosongkan jika sama dengan harga jual" }))), /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-0 left-0 right-0 bg-white border-t border-stone-100 p-4 flex gap-2", style: { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" } }, item && /* @__PURE__ */ React.createElement("button", { onClick: del, className: "px-4 rounded-2xl border border-rose-200 text-rose-500 font-semibold text-sm" }, "Hapus"), /* @__PURE__ */ React.createElement("button", { onClick: save, className: "flex-1 rounded-2xl py-3.5 font-bold text-white active:scale-[0.98] transition", style: { background: BRAND.bg } }, "Simpan")));
+  ), form.jenis === "barang" && /* @__PURE__ */ React.createElement(Field, { label: "Stok" }, /* @__PURE__ */ React.createElement("input", { type: "number", value: form.stok, onChange: (e) => setForm((f) => ({ ...f, stok: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "0" })), /* @__PURE__ */ React.createElement(Field, { label: "Satuan Item" }, /* @__PURE__ */ React.createElement("input", { value: form.satuan, onChange: (e) => setForm((f) => ({ ...f, satuan: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "pcs" })), /* @__PURE__ */ React.createElement(Field, { label: "Harga Beli" }, /* @__PURE__ */ React.createElement("input", { type: "number", value: form.harga_beli, onChange: (e) => setForm((f) => ({ ...f, harga_beli: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "0" })), /* @__PURE__ */ React.createElement(Field, { label: "Harga Jual (Eceran)" }, /* @__PURE__ */ React.createElement("input", { type: "number", value: form.harga_eceran, onChange: (e) => setForm((f) => ({ ...f, harga_eceran: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "0" })), /* @__PURE__ */ React.createElement(Field, { label: "Harga Grosir" }, /* @__PURE__ */ React.createElement("input", { type: "number", value: form.harga_grosir, onChange: (e) => setForm((f) => ({ ...f, harga_grosir: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "Kosongkan jika sama dengan harga jual" }))), /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-0 left-0 right-0 bg-white border-t border-stone-100 p-4 flex gap-2", style: { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" } }, item && /* @__PURE__ */ React.createElement("button", { onClick: del, className: "px-4 rounded-2xl border border-rose-200 text-rose-500 font-semibold text-sm" }, "Hapus"), /* @__PURE__ */ React.createElement("button", { onClick: save, disabled: uploading || saving, className: "flex-1 rounded-2xl py-3.5 font-bold text-white active:scale-[0.98] transition disabled:opacity-60", style: { background: BRAND.bg } }, uploading || saving ? "Menunggu foto..." : "Simpan")));
 }
 function Field({ label, children }) {
   return /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-xl border border-stone-200 px-3.5 py-2.5" }, /* @__PURE__ */ React.createElement("label", { className: "text-[11px] font-semibold text-stone-400 uppercase" }, label), /* @__PURE__ */ React.createElement("div", { className: "mt-0.5" }, children));
