@@ -589,7 +589,6 @@ function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
       await uploadPromiseRef.current;
       uploadPromiseRef.current = null;
     }
-    setSaving(false);
     const payload = {
       ...form,
       gambar: gambarRef.current,
@@ -599,11 +598,25 @@ function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
       harga_beli: Number(form.harga_beli) || 0,
       stok: form.jenis === "barang" ? Number(form.stok) || 0 : null
     };
-    update("barang", (prev) => {
-      const exists = prev.find((b) => b.id === payload.id);
-      if (exists) return prev.map((b) => b.id === payload.id ? payload : b);
-      return [payload, ...prev];
-    });
+    const nextBarang = (() => {
+      const exists = data.barang.find((b) => b.id === payload.id);
+      if (exists) return data.barang.map((b) => b.id === payload.id ? payload : b);
+      return [payload, ...data.barang];
+    })();
+    setSaving(true);
+    const { data: userData, error: userErr } = await sb.auth.getUser();
+    if (userErr || !(userData == null ? void 0 : userData.user)) {
+      setSaving(false);
+      notify("Sesi login bermasalah, coba refresh dan login ulang. Item BELUM tersimpan.");
+      return;
+    }
+    const ok = await saveKey(userData.user.id, "barang", nextBarang);
+    setSaving(false);
+    if (!ok) {
+      notify("Gagal menyimpan ke server (cek koneksi internet). Item BELUM tersimpan, coba lagi.");
+      return;
+    }
+    update("barang", () => nextBarang);
     notify(item ? "Item diperbarui" : "Item ditambahkan");
     exitMenu();
   };
