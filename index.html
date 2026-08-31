@@ -511,8 +511,9 @@ function SelectRow({ label, value, options, onPick, display }) {
   }, className: "w-full text-left px-3 py-2 text-sm text-stone-700" }, o[display]))));
 }
 function ItemListScreen({ ctx, onBack }) {
-  const { data, setScreen, setItemUnlocked } = ctx;
+  const { data, setScreen, setItemUnlocked, notify } = ctx;
   const [q, setQ] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
   const [jenisTab, setJenisTab] = useState("barang");
   const list = data.barang.filter((b) => {
     if (b.jenis !== jenisTab) return false;
@@ -532,7 +533,17 @@ function ItemListScreen({ ctx, onBack }) {
       style: jenisTab === t.key ? { background: BRAND.cream, color: BRAND.bg } : {}
     },
     t.label
-  )))), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-3 pb-2 sticky top-[92px] z-10", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-xl flex items-center px-3 py-2.5 gap-2 border border-stone-200" }, /* @__PURE__ */ React.createElement(Search, { size: 16, className: "text-stone-400" }), /* @__PURE__ */ React.createElement("input", { value: q, onChange: (e) => setQ(e.target.value), placeholder: "Cari nama atau barcode...", className: "outline-none text-sm flex-1" }))), /* @__PURE__ */ React.createElement("div", { className: "px-4 pb-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden" }, list.slice(0, 100).map((item) => {
+  )))), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-3 pb-2 sticky top-[92px] z-10", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-xl flex items-center px-3 py-2.5 gap-2 border border-stone-200 flex-1" }, /* @__PURE__ */ React.createElement(Search, { size: 16, className: "text-stone-400" }), /* @__PURE__ */ React.createElement("input", { value: q, onChange: (e) => setQ(e.target.value), placeholder: "Cari nama atau barcode...", className: "outline-none text-sm flex-1" })), /* @__PURE__ */ React.createElement("button", { onClick: () => setScanOpen(true), className: "p-2.5 rounded-xl text-white shrink-0", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Camera, { size: 18 })))), scanOpen && /* @__PURE__ */ React.createElement(
+    ScannerModal,
+    {
+      title: "Scan Barcode Item",
+      onDetected: (code) => {
+        setQ(code);
+        setScanOpen(false);
+      },
+      onClose: () => setScanOpen(false)
+    }
+  ), /* @__PURE__ */ React.createElement("div", { className: "px-4 pb-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden" }, list.slice(0, 100).map((item) => {
     var _a;
     return /* @__PURE__ */ React.createElement("button", { key: item.id, onClick: () => setScreen({ name: "item-form", item }), className: "w-full flex items-center gap-3 px-3 py-3 text-left" }, /* @__PURE__ */ React.createElement("div", { className: "w-14 h-14 rounded-xl shrink-0 overflow-hidden bg-stone-100 flex items-center justify-center" }, item.gambar ? /* @__PURE__ */ React.createElement("img", { src: item.gambar, alt: "", className: "w-full h-full object-cover" }) : /* @__PURE__ */ React.createElement(Camera, { size: 18, className: "text-stone-300" })), /* @__PURE__ */ React.createElement("div", { className: "min-w-0 flex-1" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700 leading-snug" }, item.nama), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-1 flex-wrap" }, item.jenis === "barang" && /* @__PURE__ */ React.createElement("span", { className: "text-[11px] text-stone-400" }, "Stok ", (_a = item.stok) != null ? _a : 0), item.barcode && /* @__PURE__ */ React.createElement("span", { className: "text-[11px] text-stone-400" }, "#", item.barcode)), /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold mt-1", style: { color: BRAND.bg } }, rupiah(item.harga_eceran)), item.harga_grosir !== item.harga_eceran && /* @__PURE__ */ React.createElement("p", { className: "text-[11px] text-stone-400" }, "Grosir ", rupiah(item.harga_grosir))));
   }), list.length === 0 && /* @__PURE__ */ React.createElement(EmptyState, { icon: Package, title: jenisTab === "jasa" ? "Belum ada layanan" : "Belum ada item" })), list.length > 100 && /* @__PURE__ */ React.createElement("p", { className: "text-center text-xs text-stone-400 mt-3" }, "Menampilkan 100 dari ", list.length, ". Gunakan pencarian.")));
