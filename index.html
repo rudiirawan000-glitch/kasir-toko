@@ -609,7 +609,21 @@ function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
         const { data: pub } = sb.storage.from("item-photos").getPublicUrl(path);
         gambarRef.current = pub.publicUrl;
         setForm((f) => ({ ...f, gambar: pub.publicUrl }));
-        notify("Foto berhasil diupload");
+        if (item && item.id) {
+          const exists = data.barang.find((b) => b.id === item.id);
+          if (exists) {
+            const updatedItem = { ...exists, gambar: pub.publicUrl };
+            const ok = await saveKey(userId, "barang", data.barang.map((b) => b.id === item.id ? updatedItem : b));
+            if (ok) {
+              update("barang", (prev) => prev.map((b) => b.id === item.id ? updatedItem : b));
+              notify("Foto tersimpan ke server");
+            } else {
+              notify("Foto diupload tapi gagal disimpan ke data item. Tekan Simpan untuk coba lagi.");
+            }
+          }
+        } else {
+          notify("Foto berhasil diupload");
+        }
       } catch (e) {
         const msg = "Gagal upload foto ke server: " + (e.message || JSON.stringify(e) || "coba lagi");
         notify(msg);
