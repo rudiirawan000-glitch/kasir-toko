@@ -139,6 +139,12 @@ async function saveKey(userId, key, value) {
     return false;
   }
 }
+function withTimeout(promise, ms, timeoutMessage) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(timeoutMessage || "Waktu habis, coba lagi")), ms))
+  ]);
+}
 const SEED = {
   toko: { nama: "Toko Saya", alamat: "", catatan: "", pesan_bawah: "Terima Kasih" },
   barang: [],
@@ -185,6 +191,7 @@ function KasirApp() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [itemUnlocked, setItemUnlocked] = useState(false);
   const pinActionRef = React.useRef(null);
+  const screenStackRef = React.useRef([]);
   const notify = (m) => {
     setToast(m);
     setTimeout(() => setToast(""), 1800);
@@ -301,12 +308,30 @@ function KasirApp() {
   };
   const openItemMenu = () => {
     if (data.security.lock_item_menu && data.security.pin && !itemUnlocked) {
-      setScreen({ name: "pin-gate", target: { name: "item-list" } });
+      navigateScreen({ name: "pin-gate", target: { name: "item-list" } });
     } else {
-      setScreen({ name: "item-list" });
+      navigateScreen({ name: "item-list" });
     }
   };
-  const ctx = { data, update, notify, cart, setCart, cartMeta, setCartMeta, tab, setTab, screen, setScreen, addToCart, openItemMenu, itemUnlocked, setItemUnlocked, userEmail: session.user.email, logout, pinActionRef };
+  const navigateScreen = (newScreen) => {
+    if (newScreen) {
+      screenStackRef.current = [...screenStackRef.current, screen];
+    } else {
+      screenStackRef.current = [];
+    }
+    setScreen(newScreen);
+  };
+  const goBackScreen = () => {
+    const stack = screenStackRef.current;
+    if (stack.length > 0) {
+      const prev = stack[stack.length - 1];
+      screenStackRef.current = stack.slice(0, -1);
+      setScreen(prev);
+    } else {
+      setScreen(null);
+    }
+  };
+  const ctx = { data, update, notify, cart, setCart, cartMeta, setCartMeta, tab, setTab, screen, setScreen: navigateScreen, addToCart, openItemMenu, itemUnlocked, setItemUnlocked, userEmail: session.user.email, logout, pinActionRef, goBackScreen };
   return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full flex flex-col", style: { background: BRAND.cream, fontFamily: "'Inter','Helvetica Neue',sans-serif" } }, /* @__PURE__ */ React.createElement("style", null, `
         @keyframes fadeIn { from {opacity:0; transform: translate(-50%,8px)} to {opacity:1; transform: translate(-50%,0)} }
         * { -webkit-tap-highlight-color: transparent; }
@@ -341,7 +366,7 @@ function KasirApp() {
   })), /* @__PURE__ */ React.createElement(Toast, { msg: toast }));
 }
 function ScreenRouter({ screen, ctx }) {
-  const back = () => window.history.back();
+  const back = () => ctx.goBackScreen();
   if (screen.name === "item-list") return /* @__PURE__ */ React.createElement(ItemListScreen, { ctx, onBack: back, pickMode: screen.pickMode });
   if (screen.name === "item-form") return /* @__PURE__ */ React.createElement(ItemFormScreen, { ctx, onBack: back, item: screen.item, defaultJenis: screen.defaultJenis });
   if (screen.name === "checkout") return /* @__PURE__ */ React.createElement(CheckoutScreen, { ctx, onBack: back });
@@ -599,12 +624,16 @@ function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
     }
     const task = (async () => {
       try {
-        const { data: userData, error: userErr } = await sb.auth.getUser();
+        const { data: userData, error: userErr } = await withTimeout(sb.auth.getUser(), 1e4, "Cek sesi login terlalu lama, coba lagi");
         if (userErr || !(userData == null ? void 0 : userData.user)) throw new Error((userErr == null ? void 0 : userErr.message) || "Sesi login bermasalah");
         const userId = userData.user.id;
         const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
         const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error } = await sb.storage.from("item-photos").upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+        const { error } = await withTimeout(
+          sb.storage.from("item-photos").upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" }),
+          2e4,
+          "Upload foto terlalu lama (sinyal internet lemah), coba lagi"
+        );
         if (error) throw error;
         const { data: pub } = sb.storage.from("item-photos").getPublicUrl(path);
         gambarRef.current = pub.publicUrl;
@@ -613,7 +642,17 @@ function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
           const exists = data.barang.find((b) => b.id === item.id);
           if (exists) {
             const updatedItem = { ...exists, gambar: pub.publicUrl };
-            const ok = await saveKey(userId, "barang", data.barang.map((b) => b.id === item.id ? updatedItem : b));
+            let ok = false;
+            try {
+              ok = await withTimeout(
+                saveKey(userId, "barang", data.barang.map((b) => b.id === item.id ? updatedItem : b)),
+                15e3,
+                "Simpan ke server terlalu lama, coba lagi"
+              );
+            } catch (saveErr) {
+              ok = false;
+              setPhotoError(saveErr.message);
+            }
             if (ok) {
               update("barang", (prev) => prev.map((b) => b.id === item.id ? updatedItem : b));
               notify("Foto tersimpan ke server");
