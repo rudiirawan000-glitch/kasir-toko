@@ -600,6 +600,7 @@ function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
   const galleryInputRef = React.useRef(null);
   const uploadPromiseRef = React.useRef(null);
   const gambarRef = React.useRef(form.gambar || "");
+  const stableIdRef = React.useRef((item == null ? void 0 : item.id) || uid());
   const exitMenu = () => {
     if (data.security.lock_item_menu) setItemUnlocked(false);
     onBack();
@@ -638,30 +639,33 @@ function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
         const { data: pub } = sb.storage.from("item-photos").getPublicUrl(path);
         gambarRef.current = pub.publicUrl;
         setForm((f) => ({ ...f, gambar: pub.publicUrl }));
-        if (item && item.id) {
-          const exists = data.barang.find((b) => b.id === item.id);
-          if (exists) {
-            const updatedItem = { ...exists, gambar: pub.publicUrl };
-            let ok = false;
-            try {
-              ok = await withTimeout(
-                saveKey(userId, "barang", data.barang.map((b) => b.id === item.id ? updatedItem : b)),
-                15e3,
-                "Simpan ke server terlalu lama, coba lagi"
-              );
-            } catch (saveErr) {
-              ok = false;
-              setPhotoError(saveErr.message);
-            }
-            if (ok) {
-              update("barang", (prev) => prev.map((b) => b.id === item.id ? updatedItem : b));
-              notify("Foto tersimpan ke server");
-            } else {
-              notify("Foto diupload tapi gagal disimpan ke data item. Tekan Simpan untuk coba lagi.");
-            }
-          }
+        const myId = stableIdRef.current;
+        const exists = data.barang.find((b) => b.id === myId);
+        const baseItem = exists || {
+          nama: form.nama || "(Belum diberi nama)",
+          jenis: form.jenis || "barang",
+          harga_eceran: Number(form.harga_eceran) || 0,
+          harga_grosir: Number(form.harga_grosir) || Number(form.harga_eceran) || 0,
+          harga_beli: Number(form.harga_beli) || 0,
+          satuan: form.satuan || "pcs",
+          stok: form.jenis === "barang" ? Number(form.stok) || 0 : null,
+          barcode: form.barcode || "",
+          aktif: true
+        };
+        const updatedItem = { ...baseItem, id: myId, gambar: pub.publicUrl };
+        const nextBarang = exists ? data.barang.map((b) => b.id === myId ? updatedItem : b) : [updatedItem, ...data.barang];
+        let ok = false;
+        try {
+          ok = await withTimeout(saveKey(userId, "barang", nextBarang), 15e3, "Simpan ke server terlalu lama, coba lagi");
+        } catch (saveErr) {
+          ok = false;
+          setPhotoError(saveErr.message);
+        }
+        if (ok) {
+          update("barang", () => nextBarang);
+          notify("Foto tersimpan ke server");
         } else {
-          notify("Foto berhasil diupload");
+          notify("Foto diupload tapi gagal disimpan ke data item. Tekan Simpan untuk coba lagi.");
         }
       } catch (e) {
         const msg = "Gagal upload foto ke server: " + (e.message || JSON.stringify(e) || "coba lagi");
@@ -687,7 +691,7 @@ function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
     const payload = {
       ...form,
       gambar: gambarRef.current,
-      id: form.id || uid(),
+      id: stableIdRef.current,
       harga_eceran: Number(form.harga_eceran) || 0,
       harga_grosir: Number(form.harga_grosir) || Number(form.harga_eceran) || 0,
       harga_beli: Number(form.harga_beli) || 0,
