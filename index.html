@@ -332,7 +332,7 @@ function KasirApp() {
     }
   };
   const ctx = { data, update, notify, cart, setCart, cartMeta, setCartMeta, tab, setTab, screen, setScreen: navigateScreen, addToCart, openItemMenu, itemUnlocked, setItemUnlocked, userEmail: session.user.email, logout, pinActionRef, goBackScreen };
-  return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full flex flex-col", style: { background: BRAND.cream, fontFamily: "'Inter','Helvetica Neue',sans-serif" } }, /* @__PURE__ */ React.createElement("style", null, `
+  return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full flex flex-col lg:flex-row", style: { background: BRAND.cream, fontFamily: "'Inter','Helvetica Neue',sans-serif" } }, /* @__PURE__ */ React.createElement("style", null, `
         @keyframes fadeIn { from {opacity:0; transform: translate(-50%,8px)} to {opacity:1; transform: translate(-50%,0)} }
         * { -webkit-tap-highlight-color: transparent; }
         ::-webkit-scrollbar { width: 0; height: 0; }
@@ -340,7 +340,31 @@ function KasirApp() {
           html, body { height: auto !important; background: white !important; }
           #root, #root > div { height: auto !important; overflow: visible !important; max-width: none !important; }
         }
-      `), /* @__PURE__ */ React.createElement("div", { className: "flex-1 overflow-y-auto pb-16" }, screen ? /* @__PURE__ */ React.createElement(ScreenRouter, { screen, ctx }) : /* @__PURE__ */ React.createElement(React.Fragment, null, tab === "dashboard" && /* @__PURE__ */ React.createElement(Dashboard, { ctx }), tab === "pos" && /* @__PURE__ */ React.createElement(PosScreen, { ctx }), tab === "riwayat" && /* @__PURE__ */ React.createElement(RiwayatScreen, { ctx }), tab === "laporan" && /* @__PURE__ */ React.createElement(LaporanScreen, { ctx }), tab === "lainnya" && /* @__PURE__ */ React.createElement(LainnyaScreen, { ctx }))), !screen && /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-0 left-0 right-0 flex items-stretch bg-white border-t border-stone-200 z-30", style: { paddingBottom: "env(safe-area-inset-bottom)" } }, [
+      `), /* @__PURE__ */ React.createElement("div", { className: "hidden lg:flex flex-col w-60 shrink-0 h-full text-white", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement("div", { className: "px-5 py-6 flex items-center gap-2.5 border-b border-white/10" }, /* @__PURE__ */ React.createElement("div", { className: "w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0" }, /* @__PURE__ */ React.createElement(Store, { size: 18 })), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-sm truncate" }, data.toko.nama || "Kasir Toko")), /* @__PURE__ */ React.createElement("div", { className: "flex-1 py-4 px-3 space-y-1" }, [
+    { id: "dashboard", label: "Beranda", icon: Store },
+    { id: "pos", label: "Transaksi", icon: ShoppingCart },
+    { id: "riwayat", label: "Riwayat", icon: History },
+    { id: "laporan", label: "Laporan", icon: BarChart3 },
+    { id: "lainnya", label: "Lainnya", icon: Menu }
+  ].map((t) => {
+    const Icon2 = t.icon;
+    const active = tab === t.id && !screen;
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: t.id,
+        onClick: () => {
+          setTab(t.id);
+          setScreen(null);
+        },
+        className: "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold relative transition-colors",
+        style: active ? { background: "rgba(255,255,255,0.15)" } : {}
+      },
+      /* @__PURE__ */ React.createElement(Icon2, { size: 18, className: active ? "text-white" : "text-white/60" }),
+      /* @__PURE__ */ React.createElement("span", { className: active ? "text-white" : "text-white/60" }, t.label),
+      t.id === "pos" && cart.length > 0 && /* @__PURE__ */ React.createElement("span", { className: "ml-auto w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center font-bold" }, cart.length)
+    );
+  })), /* @__PURE__ */ React.createElement("div", { className: "px-5 py-4 border-t border-white/10" }, /* @__PURE__ */ React.createElement("p", { className: "text-[11px] text-white/40 truncate" }, userEmail))), /* @__PURE__ */ React.createElement("div", { className: "flex-1 flex flex-col h-full overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "flex-1 overflow-y-auto pb-16 lg:pb-0" }, /* @__PURE__ */ React.createElement("div", { className: "lg:max-w-3xl lg:mx-auto lg:w-full" }, screen ? /* @__PURE__ */ React.createElement(ScreenRouter, { screen, ctx }) : /* @__PURE__ */ React.createElement(React.Fragment, null, tab === "dashboard" && /* @__PURE__ */ React.createElement(Dashboard, { ctx }), tab === "pos" && /* @__PURE__ */ React.createElement(PosScreen, { ctx }), tab === "riwayat" && /* @__PURE__ */ React.createElement(RiwayatScreen, { ctx }), tab === "laporan" && /* @__PURE__ */ React.createElement(LaporanScreen, { ctx }), tab === "lainnya" && /* @__PURE__ */ React.createElement(LainnyaScreen, { ctx })))), !screen && /* @__PURE__ */ React.createElement("div", { className: "lg:hidden fixed bottom-0 left-0 right-0 flex items-stretch bg-white border-t border-stone-200 z-30", style: { paddingBottom: "env(safe-area-inset-bottom)" } }, [
     { id: "dashboard", label: "Beranda", icon: Store },
     { id: "pos", label: "Transaksi", icon: ShoppingCart },
     { id: "riwayat", label: "Riwayat", icon: History },
@@ -363,7 +387,7 @@ function KasirApp() {
       /* @__PURE__ */ React.createElement(Icon2, { size: 20, color: active ? BRAND.bg : "#a8a29e", strokeWidth: active ? 2.4 : 2 }),
       /* @__PURE__ */ React.createElement("span", { className: "text-[10px] font-medium", style: { color: active ? BRAND.bg : "#a8a29e" } }, t.label)
     );
-  })), /* @__PURE__ */ React.createElement(Toast, { msg: toast }));
+  }))), /* @__PURE__ */ React.createElement(Toast, { msg: toast }));
 }
 function ScreenRouter({ screen, ctx }) {
   const back = () => ctx.goBackScreen();
@@ -1127,7 +1151,7 @@ function Toggle({ label, value, onChange, disabled }) {
   return /* @__PURE__ */ React.createElement("button", { onClick: () => !disabled && onChange(!value), disabled, className: `w-full flex items-center justify-between py-3 ${disabled ? "opacity-40" : ""}` }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-700 text-left pr-3" }, label), /* @__PURE__ */ React.createElement("span", { className: `shrink-0 w-12 h-7 rounded-full relative transition-colors ${value ? "" : "bg-stone-200"}`, style: value ? { background: BRAND.bg } : {} }, /* @__PURE__ */ React.createElement("span", { className: `absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-all ${value ? "left-[22px]" : "left-0.5"}` })));
 }
 function SecurityScreen({ ctx, onBack }) {
-  const { data, update, notify, logout, userEmail } = ctx;
+  const { data, update, notify, logout, userEmail: userEmail2 } = ctx;
   const [pinBaru, setPinBaru] = useState("");
   const [lockItemMenu, setLockItemMenu] = useState(data.security.lock_item_menu);
   const [lockDeleteTransaksi, setLockDeleteTransaksi] = useState(data.security.lock_delete_transaksi);
@@ -1146,7 +1170,7 @@ function SecurityScreen({ ctx, onBack }) {
     notify("Pengaturan keamanan disimpan");
     onBack();
   };
-  return /* @__PURE__ */ React.createElement("div", { className: "pb-24" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Keamanan", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-3.5" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-1" }, "Akun Aktif"), /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700" }, userEmail)), /* @__PURE__ */ React.createElement(Field, { label: hasPin ? "Ubah PIN Menu (kosongkan jika tidak diubah)" : "Buat PIN Menu" }, /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-24" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Keamanan", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-3.5" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-1" }, "Akun Aktif"), /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700" }, userEmail2)), /* @__PURE__ */ React.createElement(Field, { label: hasPin ? "Ubah PIN Menu (kosongkan jika tidak diubah)" : "Buat PIN Menu" }, /* @__PURE__ */ React.createElement(
     "input",
     {
       type: "tel",
@@ -1428,7 +1452,7 @@ try {
   root.render(
     React.createElement(
       "div",
-      { style: { height: "100dvh", width: "100%", maxWidth: 480, margin: "0 auto", overflow: "hidden" } },
+      { style: { height: "100dvh", width: "100%", overflow: "hidden" } },
       React.createElement(KasirApp)
     )
   );
