@@ -610,7 +610,7 @@ function ItemListScreen({ ctx, onBack }) {
       },
       onClose: () => setScanOpen(false)
     }
-  ), /* @__PURE__ */ React.createElement("div", { className: "px-4 pb-4" }, /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-3" }, list.slice(0, 100).map((item) => {
+  ), /* @__PURE__ */ React.createElement("div", { className: "px-4 pb-4" }, /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-3" }, list.slice(0, 100).map((item) => {
     var _a;
     const lowStock = item.jenis === "barang" && item.stok !== null && item.stok !== void 0 && item.stok <= 2;
     return /* @__PURE__ */ React.createElement("button", { key: item.id, onClick: () => setScreen({ name: "item-form", item }), className: "w-full flex items-center gap-4 px-4 py-4 text-left bg-white rounded-2xl border border-stone-100" }, /* @__PURE__ */ React.createElement("div", { className: "w-28 h-28 rounded-2xl shrink-0 overflow-hidden bg-stone-100 flex items-center justify-center" }, item.gambar ? /* @__PURE__ */ React.createElement("img", { src: item.gambar, alt: "", className: "w-full h-full object-cover" }) : /* @__PURE__ */ React.createElement(Camera, { size: 32, className: "text-stone-300" })), /* @__PURE__ */ React.createElement("div", { className: "min-w-0 flex-1" }, /* @__PURE__ */ React.createElement("p", { className: "text-base font-semibold text-stone-700 leading-snug" }, item.nama), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-1.5 flex-wrap" }, item.jenis === "barang" && /* @__PURE__ */ React.createElement(
@@ -622,7 +622,7 @@ function ItemListScreen({ ctx, onBack }) {
       "Stok ",
       (_a = item.stok) != null ? _a : 0
     ), item.barcode && /* @__PURE__ */ React.createElement("span", { className: "text-xs text-stone-400" }, "#", item.barcode)), /* @__PURE__ */ React.createElement("p", { className: "text-base font-bold mt-2", style: { color: BRAND.bg } }, rupiah(item.harga_eceran)), item.harga_grosir !== item.harga_eceran && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400" }, "Grosir ", rupiah(item.harga_grosir))));
-  }), list.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "lg:col-span-2" }, /* @__PURE__ */ React.createElement(EmptyState, { icon: Package, title: jenisTab === "jasa" ? "Belum ada layanan" : "Belum ada item" }))), list.length > 100 && /* @__PURE__ */ React.createElement("p", { className: "text-center text-xs text-stone-400 mt-3" }, "Menampilkan 100 dari ", list.length, ". Gunakan pencarian.")));
+  }), list.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "lg:col-span-3" }, /* @__PURE__ */ React.createElement(EmptyState, { icon: Package, title: jenisTab === "jasa" ? "Belum ada layanan" : "Belum ada item" }))), list.length > 100 && /* @__PURE__ */ React.createElement("p", { className: "text-center text-xs text-stone-400 mt-3" }, "Menampilkan 100 dari ", list.length, ". Gunakan pencarian.")));
 }
 function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
   const { update, notify, setItemUnlocked, data } = ctx;
