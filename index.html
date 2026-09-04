@@ -115,6 +115,9 @@ const genKode = () => {
 const SUPABASE_URL = "https://uzpfryfhabtfpdxpctjg.supabase.co";
 const SUPABASE_KEY = "sb_publishable_4TBvNrM9b07hy7n-jRAcOQ_XOOTk1XH";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SERVIS_URL = "https://qhuiuzgfemyejqjurv.supabase.co";
+const SERVIS_KEY = "sb_publishable_sSOSn-sTdx-CYUIj6UlvOg_9UWpSwgV";
+const sbServis = window.supabase.createClient(SERVIS_URL, SERVIS_KEY);
 const KEYS = ["toko", "barang", "pelanggan", "mekanik", "metode_bayar", "transaksi", "pengeluaran", "security"];
 async function loadAll(userId) {
   const out = {};
@@ -423,6 +426,8 @@ function ScreenRouter({ screen, ctx }) {
   if (screen.name === "toko-edit") return /* @__PURE__ */ React.createElement(TokoEditScreen, { ctx, onBack: back });
   if (screen.name === "import-data") return /* @__PURE__ */ React.createElement(ImportDataScreen, { ctx, onBack: back });
   if (screen.name === "printer-settings") return /* @__PURE__ */ React.createElement(PrinterSettingsScreen, { ctx, onBack: back });
+  if (screen.name === "servis-hp") return /* @__PURE__ */ React.createElement(ServisHpScreen, { ctx, onBack: back });
+  if (screen.name === "servis-hp-detail") return /* @__PURE__ */ React.createElement(ServisHpDetailScreen, { ctx, onBack: back, trxId: screen.trxId });
   if (screen.name === "pin-gate") return /* @__PURE__ */ React.createElement(PinGateScreen, { ctx, onBack: back, target: screen.target });
   if (screen.name === "security") return /* @__PURE__ */ React.createElement(SecurityScreen, { ctx, onBack: back });
   if (screen.name === "customer-picker") return /* @__PURE__ */ React.createElement(CustomerPickerScreen, { ctx, onBack: back });
@@ -973,7 +978,8 @@ function LainnyaScreen({ ctx }) {
     { label: "Item / Layanan", icon: Package, action: openItemMenu },
     { label: "Keamanan", icon: Settings, action: () => setScreen({ name: "security" }) },
     { label: "Import / Export Backup", icon: Receipt, action: () => setScreen({ name: "import-data" }) },
-    { label: "Printer", icon: Printer, action: () => setScreen({ name: "printer-settings" }) }
+    { label: "Printer", icon: Printer, action: () => setScreen({ name: "printer-settings" }) },
+    { label: "Servis HP", icon: Wrench, action: () => setScreen({ name: "servis-hp" }) }
   ];
   return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(TopBar, { title: "Lainnya" }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden" }, items.map((it, i) => {
     const Icon2 = it.icon;
@@ -1506,6 +1512,79 @@ function PhotoCaptureModal({ onCaptured, onClose }) {
     );
   };
   return /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 z-50 bg-black flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between px-4 py-3.5 text-white" }, /* @__PURE__ */ React.createElement("p", { className: "font-bold text-sm" }, "Ambil Foto Item"), /* @__PURE__ */ React.createElement("button", { onClick: onClose, className: "p-1.5 bg-white/15 rounded-full" }, /* @__PURE__ */ React.createElement(X, { size: 18 }))), /* @__PURE__ */ React.createElement("div", { className: "flex-1 flex items-center justify-center relative" }, status === "ready" || status === "starting" ? /* @__PURE__ */ React.createElement("video", { ref: videoRef, className: "w-full h-full object-cover", playsInline: true, muted: true }) : /* @__PURE__ */ React.createElement("div", { className: "px-8 text-center text-white/80 text-sm" }, status === "unsupported" && "Kamera langsung tidak didukung di browser ini. Gunakan tombol Galeri sebagai gantinya.", status === "denied" && "Tidak bisa mengakses kamera (izin ditolak). Gunakan tombol Galeri sebagai gantinya.")), status === "ready" && /* @__PURE__ */ React.createElement("div", { className: "p-6 flex items-center justify-center" }, /* @__PURE__ */ React.createElement("button", { onClick: capture, className: "w-16 h-16 rounded-full bg-white border-4 border-white/30 active:scale-90 transition" })));
+}
+const SERVIS_STATUS_LABEL = {
+  pending: "Menunggu",
+  diagnosa: "Diagnosa",
+  menunggu_sparepart: "Tunggu Sparepart",
+  dikerjakan: "Dikerjakan",
+  selesai: "Selesai",
+  gagal: "Gagal",
+  diambil: "Sudah Diambil"
+};
+function servisStatusTone(status) {
+  const s = (status || "").toLowerCase();
+  if (s === "selesai" || s === "diambil") return "green";
+  if (s === "gagal") return "red";
+  if (s === "dikerjakan" || s === "diagnosa") return "amber";
+  return "default";
+}
+function ServisHpScreen({ ctx, onBack }) {
+  const { setScreen } = ctx;
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [list, setList] = useState([]);
+  const [q, setQ] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setErrorMsg("");
+      try {
+        const { data, error } = await sbServis.from("services").select("id, service_number, customer_name, customer_phone, device_brand, device_model, complaint, status, total_cost, remaining_balance, created_at").order("created_at", { ascending: false }).limit(200);
+        if (error) throw error;
+        if (!cancelled) setList(data || []);
+      } catch (e) {
+        if (!cancelled) setErrorMsg(e.message || "Gagal mengambil data dari aplikasi Servis HP");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const filtered = list.filter((s) => {
+    if (!q) return true;
+    const hay = `${s.service_number} ${s.customer_name} ${s.customer_phone} ${s.device_brand} ${s.device_model}`.toLowerCase();
+    return hay.includes(q.toLowerCase());
+  });
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Servis HP", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-xl flex items-center px-3 py-2.5 gap-2 border border-stone-200 mb-3" }, /* @__PURE__ */ React.createElement(Search, { size: 16, className: "text-stone-400" }), /* @__PURE__ */ React.createElement("input", { value: q, onChange: (e) => setQ(e.target.value), placeholder: "Cari nomor servis, nama, atau HP...", className: "outline-none text-sm flex-1" })), loading && /* @__PURE__ */ React.createElement("div", { className: "py-16 flex flex-col items-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-8 h-8 border-4 border-stone-200 rounded-full animate-spin mb-3", style: { borderTopColor: BRAND.bg } }), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-400" }, "Mengambil data dari Servis HP...")), !loading && errorMsg && /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 border border-rose-200 bg-rose-50" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-rose-600 mb-1" }, "Gagal memuat data"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-rose-500" }, errorMsg)), !loading && !errorMsg && /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden" }, filtered.map((s) => /* @__PURE__ */ React.createElement("button", { key: s.id, onClick: () => setScreen({ name: "servis-hp-detail", trxId: s.id }), className: "w-full text-left px-4 py-3.5" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-1" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700" }, "#", s.service_number), /* @__PURE__ */ React.createElement(Badge, { tone: servisStatusTone(s.status) }, SERVIS_STATUS_LABEL[s.status] || s.status || "-")), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-600" }, s.customer_name, " \xB7 ", s.customer_phone), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 mt-0.5" }, s.device_brand, " ", s.device_model, " \xB7 ", fmtDate(s.created_at)), s.complaint && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 mt-1 truncate" }, "Keluhan: ", s.complaint))), filtered.length === 0 && /* @__PURE__ */ React.createElement(EmptyState, { icon: Wrench, title: "Belum ada data servis", hint: q ? "Coba kata kunci lain" : "" }))));
+}
+function ServisHpDetailScreen({ ctx, onBack, trxId }) {
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [s, setS] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setErrorMsg("");
+      try {
+        const { data, error } = await sbServis.from("services").select("*").eq("id", trxId).single();
+        if (error) throw error;
+        if (!cancelled) setS(data);
+      } catch (e) {
+        if (!cancelled) setErrorMsg(e.message || "Gagal mengambil detail servis");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [trxId]);
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: s ? `#${s.service_number}` : "Detail Servis", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-3" }, loading && /* @__PURE__ */ React.createElement("div", { className: "py-16 flex flex-col items-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-8 h-8 border-4 border-stone-200 rounded-full animate-spin mb-3", style: { borderTopColor: BRAND.bg } })), !loading && errorMsg && /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 border border-rose-200 bg-rose-50" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-rose-600 mb-1" }, "Gagal memuat data"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-rose-500" }, errorMsg)), !loading && s && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4" }, /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "Status"), /* @__PURE__ */ React.createElement(Badge, { tone: servisStatusTone(s.status) }, SERVIS_STATUS_LABEL[s.status] || s.status || "-")), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "Pelanggan"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold" }, s.customer_name)), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "No. HP"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold" }, s.customer_phone)), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "Perangkat"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold" }, s.device_brand, " ", s.device_model)), s.imei_1 && /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "IMEI"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold" }, s.imei_1)), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "Teknisi"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold" }, s.technician_name || "-"))), s.complaint && /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-1.5" }, "Keluhan"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-700" }, s.complaint)), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4" }, /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "Estimasi Biaya"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold" }, rupiah(s.estimated_cost || 0))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "Total Biaya"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-bold", style: { color: BRAND.bg } }, rupiah(s.total_cost || 0))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "DP"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold" }, rupiah(s.down_payment || 0))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "Sisa Bayar"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-bold text-rose-500" }, rupiah(s.remaining_balance || 0)))))));
 }
 
 </script>
