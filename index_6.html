@@ -1,0 +1,1721 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#1d4ed8" />
+<title>Kasir Toko</title>
+<link rel="manifest" href="./manifest.json" />
+<link rel="icon" href="./icon-192.png" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Kasir Toko" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  html, body, #root { height: 100%; margin: 0; background: #f1f5f9; }
+  * { -webkit-tap-highlight-color: transparent; }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+</style>
+<script>
+
+window.addEventListener("error", function (e) {
+  var el = document.getElementById("root");
+  if (el && !el.hasChildNodes()) {
+    el.innerHTML =
+      '<div style="padding:24px;font-family:sans-serif;color:#7f1d1d;background:#fee2e2;margin:16px;border-radius:12px;">' +
+      '<b>Gagal memuat aplikasi:</b><br><br><pre style="white-space:pre-wrap;font-size:12px;">' +
+      (e.message || e) + ' (' + (e.filename || '') + ':' + (e.lineno || '') + ')' +
+      '</pre></div>';
+  }
+});
+
+</script>
+</head>
+<body>
+<div id="root">
+  <div style="display:flex;align-items:center;justify-content:center;height:100%;font-family:sans-serif;color:#999;">Memuat...</div>
+</div>
+
+<script>
+
+const PREFIX = "kasir:";
+window.storage = window.storage || {
+  async get(key, _shared) {
+    const raw = localStorage.getItem(PREFIX + key);
+    if (raw === null) throw new Error(`Key "${key}" not found`);
+    return { key, value: raw, shared: !!_shared };
+  },
+  async set(key, value, _shared) {
+    localStorage.setItem(PREFIX + key, value);
+    return { key, value, shared: !!_shared };
+  },
+};
+
+</script>
+
+<script>
+const Icon = (children) => ({ size = 20, color = "currentColor", strokeWidth = 2, className = "", style }) => React.createElement(
+  "svg",
+  { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth, strokeLinecap: "round", strokeLinejoin: "round", className, style },
+  children
+);
+const L = (attrs) => React.createElement("line", attrs);
+const C = (attrs) => React.createElement("circle", attrs);
+const R = (attrs) => React.createElement("rect", attrs);
+const P = (attrs) => React.createElement("polyline", attrs);
+const Pg = (attrs) => React.createElement("polygon", attrs);
+const Pa = (attrs) => React.createElement("path", attrs);
+const Icons = {
+  Menu: Icon([L({ x1: 3, y1: 6, x2: 21, y2: 6, key: 1 }), L({ x1: 3, y1: 12, x2: 21, y2: 12, key: 2 }), L({ x1: 3, y1: 18, x2: 21, y2: 18, key: 3 })]),
+  X: Icon([L({ x1: 18, y1: 6, x2: 6, y2: 18, key: 1 }), L({ x1: 6, y1: 6, x2: 18, y2: 18, key: 2 })]),
+  Search: Icon([C({ cx: 11, cy: 11, r: 7, key: 1 }), L({ x1: 21, y1: 21, x2: 16.65, y2: 16.65, key: 2 })]),
+  Plus: Icon([L({ x1: 12, y1: 5, x2: 12, y2: 19, key: 1 }), L({ x1: 5, y1: 12, x2: 19, y2: 12, key: 2 })]),
+  Minus: Icon([L({ x1: 5, y1: 12, x2: 19, y2: 12, key: 1 })]),
+  Trash2: Icon([P({ points: "3,6 5,6 21,6", key: 1 }), Pa({ d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2", key: 2 }), L({ x1: 10, y1: 11, x2: 10, y2: 17, key: 3 }), L({ x1: 14, y1: 11, x2: 14, y2: 17, key: 4 })]),
+  ShoppingCart: Icon([C({ cx: 9, cy: 21, r: 1, key: 1 }), C({ cx: 20, cy: 21, r: 1, key: 2 }), Pa({ d: "M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6", key: 3 })]),
+  History: Icon([Pa({ d: "M3 12a9 9 0 1 0 3-6.7", key: 1 }), P({ points: "3,4 3,10 9,10", key: 2 }), P({ points: "12,7 12,12 16,14", key: 3 })]),
+  BarChart3: Icon([L({ x1: 4, y1: 20, x2: 4, y2: 12, key: 1 }), L({ x1: 12, y1: 20, x2: 12, y2: 4, key: 2 }), L({ x1: 20, y1: 20, x2: 20, y2: 16, key: 3 })]),
+  Users: Icon([Pa({ d: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2", key: 1 }), C({ cx: 9, cy: 7, r: 4, key: 2 }), Pa({ d: "M23 21v-2a4 4 0 0 0-3-3.87", key: 3 }), Pa({ d: "M16 3.13a4 4 0 0 1 0 7.75", key: 4 })]),
+  Wrench: Icon([Pa({ d: "M14.7 6.3a4 4 0 1 1-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 1 5.4-5.4L21 6l-3-3z", key: 1 })]),
+  Settings: Icon([C({ cx: 12, cy: 12, r: 3, key: 1 }), Pa({ d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z", key: 2 })]),
+  ChevronLeft: Icon([P({ points: "15,18 9,12 15,6", key: 1 })]),
+  ChevronRight: Icon([P({ points: "9,18 15,12 9,6", key: 1 })]),
+  Check: Icon([P({ points: "20,6 9,17 4,12", key: 1 })]),
+  Package: Icon([Pa({ d: "M21 8l-9-5-9 5 9 5 9-5z", key: 1 }), Pa({ d: "M3 8v8l9 5 9-5V8", key: 2 }), L({ x1: 12, y1: 13, x2: 12, y2: 21, key: 3 })]),
+  Tag: Icon([Pa({ d: "M20.59 13.41L11 3.83A2 2 0 0 0 9.59 3.24H4a1 1 0 0 0-1 1v5.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.82 0l4.6-4.6a2 2 0 0 0 0-2.82z", key: 1 }), C({ cx: 7.5, cy: 7.5, r: 1.2, key: 2 })]),
+  Printer: Icon([Pa({ d: "M6 9V2h12v7", key: 1 }), Pa({ d: "M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2", key: 2 }), R({ x: 6, y: 14, width: 12, height: 8, key: 3 })]),
+  TrendingUp: Icon([P({ points: "23,6 13.5,15.5 8.5,10.5 1,18", key: 1 }), P({ points: "17,6 23,6 23,12", key: 2 })]),
+  Receipt: Icon([Pa({ d: "M4 2h16v20l-3-2-3 2-3-2-3 2-3-2-1 2z", key: 1 }), L({ x1: 8, y1: 7, x2: 16, y2: 7, key: 2 }), L({ x1: 8, y1: 11, x2: 16, y2: 11, key: 3 }), L({ x1: 8, y1: 15, x2: 13, y2: 15, key: 4 })]),
+  Store: Icon([Pa({ d: "M3 9l1.5-5h15L21 9", key: 1 }), Pa({ d: "M3 9v10a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9", key: 2 }), Pa({ d: "M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0", key: 3 })]),
+  CreditCard: Icon([R({ x: 1, y: 4, width: 22, height: 16, rx: 2, key: 1 }), L({ x1: 1, y1: 10, x2: 23, y2: 10, key: 2 })]),
+  Camera: Icon([Pa({ d: "M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z", key: 1 }), C({ cx: 12, cy: 13, r: 4, key: 2 })])
+};
+const { useState, useEffect, useMemo, useCallback } = React;
+const { Menu, X, Search, Plus, Minus, Trash2, ShoppingCart, History, BarChart3, Users, Wrench, Settings, ChevronLeft, ChevronRight, Check, Package, Tag, Printer, TrendingUp, Receipt, Store, CreditCard, Camera } = Icons;
+const rupiah = (n) => {
+  const v = Math.round(Number(n) || 0);
+  return "Rp" + v.toLocaleString("id-ID");
+};
+const todayStr = () => (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+const fmtDate = (iso) => {
+  if (!iso) return "-";
+  const d = new Date(iso.replace(" ", "T"));
+  if (isNaN(d)) return iso;
+  return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }) + " " + d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+};
+const uid = () => Date.now() + Math.floor(Math.random() * 1e4);
+const genKode = () => {
+  const d = /* @__PURE__ */ new Date();
+  return `TRX${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}${Math.floor(Math.random() * 9e3 + 1e3)}`;
+};
+const SUPABASE_URL = "https://uzpfryfhabtfpdxpctjg.supabase.co";
+const SUPABASE_KEY = "sb_publishable_4TBvNrM9b07hy7n-jRAcOQ_XOOTk1XH";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SERVIS_URL = "https://qhuiuzgfemyeyjqyjurv.supabase.co";
+const SERVIS_KEY = "sb_publishable_sSOSn-sTdx-CYUIj6UlvOg_9UWpSwgV";
+const sbServis = window.supabase.createClient(SERVIS_URL, SERVIS_KEY);
+const KEYS = ["toko", "barang", "pelanggan", "mekanik", "metode_bayar", "transaksi", "pengeluaran", "security"];
+async function loadAll(userId) {
+  const out = {};
+  try {
+    const { data, error } = await sb.from("kasir_data").select("key,value").eq("user_id", userId);
+    if (error) throw error;
+    for (const row of data || []) {
+      out[row.key] = row.value;
+    }
+  } catch (e) {
+    console.error("loadAll failed", e);
+  }
+  return out;
+}
+async function saveKey(userId, key, value) {
+  try {
+    const { error } = await sb.from("kasir_data").upsert({ user_id: userId, key, value, updated_at: (/* @__PURE__ */ new Date()).toISOString() }, { onConflict: "user_id,key" });
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.error("saveKey failed", key, e);
+    return false;
+  }
+}
+function withTimeout(promise, ms, timeoutMessage) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(timeoutMessage || "Waktu habis, coba lagi")), ms))
+  ]);
+}
+const SEED = {
+  toko: { nama: "Toko Saya", alamat: "", catatan: "", pesan_bawah: "Terima Kasih" },
+  barang: [],
+  pelanggan: [],
+  mekanik: [],
+  metode_bayar: [
+    { id: 1, nama: "Cash" },
+    { id: 2, nama: "Transfer" }
+  ],
+  transaksi: [],
+  pengeluaran: [],
+  security: { pin: "", require_login: false, lock_item_menu: false, lock_delete_transaksi: false }
+};
+const BRAND = { bg: "#1d4ed8", bgDark: "#1e3a8a", accent: "#0ea5e9", cream: "#f1f5f9", ink: "#0f172a" };
+function Badge({ children, tone = "default" }) {
+  const tones = {
+    default: "bg-stone-100 text-stone-600",
+    green: "bg-emerald-100 text-emerald-700",
+    amber: "bg-amber-100 text-amber-700",
+    red: "bg-rose-100 text-rose-700"
+  };
+  return /* @__PURE__ */ React.createElement("span", { className: `px-2 py-0.5 rounded-full text-xs font-medium ${tones[tone]}` }, children);
+}
+function EmptyState({ icon: Icon2, title, hint }) {
+  return /* @__PURE__ */ React.createElement("div", { className: "flex flex-col items-center justify-center py-16 text-center px-6" }, /* @__PURE__ */ React.createElement("div", { className: "w-14 h-14 rounded-2xl flex items-center justify-center mb-3", style: { background: "#dbeafe" } }, /* @__PURE__ */ React.createElement(Icon2, { size: 26, style: { color: BRAND.bg } })), /* @__PURE__ */ React.createElement("p", { className: "font-semibold text-stone-700" }, title), hint && /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-400 mt-1" }, hint));
+}
+function SalesTrendChart({ data }) {
+  const [hoverIdx, setHoverIdx] = useState(null);
+  const w = 640, h = 180, padX = 24, padY = 16;
+  const max = Math.max(1, ...data.map((d) => d.total));
+  const stepX = (w - padX * 2) / Math.max(1, data.length - 1);
+  const points = data.map((d, i) => {
+    const x = padX + i * stepX;
+    const y = padY + (1 - d.total / max) * (h - padY * 2);
+    return { x, y, ...d };
+  });
+  const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+  const areaD = `${pathD} L ${points[points.length - 1].x} ${h - padY} L ${points[0].x} ${h - padY} Z`;
+  return /* @__PURE__ */ React.createElement("div", { className: "relative" }, /* @__PURE__ */ React.createElement("svg", { viewBox: `0 0 ${w} ${h}`, className: "w-full", style: { height: 180 } }, /* @__PURE__ */ React.createElement("defs", null, /* @__PURE__ */ React.createElement("linearGradient", { id: "salesFill", x1: "0", y1: "0", x2: "0", y2: "1" }, /* @__PURE__ */ React.createElement("stop", { offset: "0%", stopColor: BRAND.bg, stopOpacity: "0.18" }), /* @__PURE__ */ React.createElement("stop", { offset: "100%", stopColor: BRAND.bg, stopOpacity: "0" }))), /* @__PURE__ */ React.createElement("path", { d: areaD, fill: "url(#salesFill)" }), /* @__PURE__ */ React.createElement("path", { d: pathD, fill: "none", stroke: BRAND.bg, strokeWidth: "2.5", strokeLinecap: "round", strokeLinejoin: "round" }), points.map((p, i) => /* @__PURE__ */ React.createElement("g", { key: i, onMouseEnter: () => setHoverIdx(i), onMouseLeave: () => setHoverIdx(null) }, /* @__PURE__ */ React.createElement("circle", { cx: p.x, cy: p.y, r: hoverIdx === i ? 5 : 3.5, fill: "white", stroke: BRAND.bg, strokeWidth: "2" }), /* @__PURE__ */ React.createElement("rect", { x: p.x - stepX / 2, y: 0, width: stepX, height: h, fill: "transparent" })))), hoverIdx !== null && /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      className: "absolute bg-stone-800 text-white text-xs rounded-lg px-2.5 py-1.5 pointer-events-none -translate-x-1/2 -translate-y-full",
+      style: { left: `${points[hoverIdx].x / w * 100}%`, top: `${points[hoverIdx].y / h * 100}%` }
+    },
+    /* @__PURE__ */ React.createElement("p", { className: "font-semibold" }, points[hoverIdx].label),
+    /* @__PURE__ */ React.createElement("p", null, rupiah(points[hoverIdx].total))
+  ), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mt-1 px-1" }, data.map((d, i) => /* @__PURE__ */ React.createElement("span", { key: i, className: "text-[10px] text-stone-400" }, d.label))));
+}
+function TopBar({ title, onBack, right }) {
+  return /* @__PURE__ */ React.createElement("div", { className: "sticky top-0 z-20 flex items-center gap-2 px-4 py-3.5 text-white", style: { background: BRAND.bg } }, onBack && /* @__PURE__ */ React.createElement("button", { onClick: onBack, className: "p-1 -ml-1 rounded-full active:bg-white/10" }, /* @__PURE__ */ React.createElement(ChevronLeft, { size: 22 })), /* @__PURE__ */ React.createElement("h1", { className: "text-[17px] font-bold flex-1 truncate" }, title), right);
+}
+function Toast({ msg }) {
+  if (!msg) return null;
+  return /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-stone-900 text-white text-sm px-4 py-2.5 rounded-full shadow-lg animate-[fadeIn_0.2s_ease]" }, msg);
+}
+function KasirApp() {
+  const [session, setSession] = useState(void 0);
+  const [authView, setAuthView] = useState("login");
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [tab, setTab] = useState("dashboard");
+  const [screen, setScreen] = useState(null);
+  const [cart, setCart] = useState([]);
+  const [cartMeta, setCartMeta] = useState({ pelanggan_id: null, mekanik_id: null, metode_bayar_id: null, diskon: 0 });
+  const [toast, setToast] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [itemUnlocked, setItemUnlocked] = useState(false);
+  const pinActionRef = React.useRef(null);
+  const screenStackRef = React.useRef([]);
+  const notify = (m) => {
+    setToast(m);
+    setTimeout(() => setToast(""), 1800);
+  };
+  useEffect(() => {
+    sb.auth.getSession().then(({ data: { session: session2 } }) => setSession(session2));
+    const { data: listener } = sb.auth.onAuthStateChange((event, sess) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setAuthView("reset");
+      }
+      setSession(sess);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+  const loadAccountData = useCallback(async (userId) => {
+    setLoading(true);
+    const loaded = await loadAll(userId);
+    let needsSeed = !loaded.barang || !loaded.toko;
+    let merged = { ...loaded };
+    if (needsSeed) {
+      merged = {
+        toko: loaded.toko || SEED.toko,
+        barang: loaded.barang || SEED.barang,
+        pelanggan: loaded.pelanggan || SEED.pelanggan,
+        mekanik: loaded.mekanik || SEED.mekanik,
+        metode_bayar: loaded.metode_bayar || SEED.metode_bayar,
+        transaksi: loaded.transaksi || SEED.transaksi,
+        pengeluaran: loaded.pengeluaran || SEED.pengeluaran,
+        security: loaded.security || SEED.security
+      };
+      for (const k of KEYS) {
+        if (!loaded[k]) await saveKey(userId, k, merged[k]);
+      }
+    }
+    if (!merged.security) {
+      merged.security = SEED.security;
+      await saveKey(userId, "security", SEED.security);
+    }
+    setData(merged);
+    setLoading(false);
+  }, []);
+  useEffect(() => {
+    if (session && session.user) {
+      loadAccountData(session.user.id);
+    } else {
+      setData(null);
+    }
+  }, [session, loadAccountData]);
+  const skipPushRef = React.useRef(false);
+  const historyInitRef = React.useRef(false);
+  useEffect(() => {
+    if (!session || !session.user || !data) return;
+    if (!historyInitRef.current) {
+      historyInitRef.current = true;
+      window.history.replaceState({ screen, tab }, "");
+      return;
+    }
+    if (skipPushRef.current) {
+      skipPushRef.current = false;
+      return;
+    }
+    window.history.pushState({ screen, tab }, "");
+  }, [screen, tab, session, data]);
+  useEffect(() => {
+    const onPopState = (e) => {
+      const state = e.state || { screen: null, tab: "dashboard" };
+      skipPushRef.current = true;
+      setScreen(state.screen || null);
+      setTab(state.tab || "dashboard");
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+  const update = useCallback((key, updater) => {
+    setData((prev) => {
+      const nextVal = typeof updater === "function" ? updater(prev[key]) : updater;
+      const next = { ...prev, [key]: nextVal };
+      if (session && session.user) saveKey(session.user.id, key, nextVal);
+      return next;
+    });
+  }, [session]);
+  const logout = async () => {
+    await sb.auth.signOut();
+    setData(null);
+    setTab("dashboard");
+    setScreen(null);
+    setCart([]);
+    setItemUnlocked(false);
+    historyInitRef.current = false;
+  };
+  if (session === void 0) {
+    return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full flex items-center justify-center", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("div", { className: "text-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-10 h-10 border-4 border-stone-200 rounded-full animate-spin mx-auto mb-3", style: { borderTopColor: BRAND.bg } }), /* @__PURE__ */ React.createElement("p", { className: "text-stone-400 text-sm" }, "Memuat...")));
+  }
+  if (authView === "reset") {
+    return /* @__PURE__ */ React.createElement(ResetPasswordScreen, { notify, onDone: () => setAuthView("login") });
+  }
+  if (!session || !session.user || loading || !data) {
+    if (session && session.user && (loading || !data)) {
+      return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full flex items-center justify-center", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("div", { className: "text-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-10 h-10 border-4 border-stone-200 rounded-full animate-spin mx-auto mb-3", style: { borderTopColor: BRAND.bg } }), /* @__PURE__ */ React.createElement("p", { className: "text-stone-400 text-sm" }, "Memuat data toko...")));
+    }
+    return /* @__PURE__ */ React.createElement(AuthGateScreen, { view: authView, setView: setAuthView, notify });
+  }
+  const addToCart = (item, mode = "eceran") => {
+    setCart((prev) => {
+      const idx = prev.findIndex((c) => c.barang_id === item.id && c.mode === mode);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = { ...next[idx], qty: next[idx].qty + 1 };
+        return next;
+      }
+      return [...prev, { barang_id: item.id, nama: item.nama, satuan: item.satuan, jenis: item.jenis, harga_eceran: item.harga_eceran, harga_grosir: item.harga_grosir || item.harga_eceran, mode, qty: 1 }];
+    });
+    notify(`${item.nama} ditambahkan`);
+  };
+  const openItemMenu = () => {
+    if (data.security.lock_item_menu && data.security.pin && !itemUnlocked) {
+      navigateScreen({ name: "pin-gate", target: { name: "item-list" } });
+    } else {
+      navigateScreen({ name: "item-list" });
+    }
+  };
+  const navigateScreen = (newScreen) => {
+    if (newScreen) {
+      screenStackRef.current = [...screenStackRef.current, screen];
+    } else {
+      screenStackRef.current = [];
+    }
+    setScreen(newScreen);
+  };
+  const goBackScreen = () => {
+    const stack = screenStackRef.current;
+    if (stack.length > 0) {
+      const prev = stack[stack.length - 1];
+      screenStackRef.current = stack.slice(0, -1);
+      setScreen(prev);
+    } else {
+      setScreen(null);
+    }
+  };
+  const ctx = { data, update, notify, cart, setCart, cartMeta, setCartMeta, tab, setTab, screen, setScreen: navigateScreen, addToCart, openItemMenu, itemUnlocked, setItemUnlocked, userEmail: session.user.email, logout, pinActionRef, goBackScreen };
+  return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full flex flex-col lg:flex-row", style: { background: BRAND.cream, fontFamily: "'Inter','Helvetica Neue',sans-serif" } }, /* @__PURE__ */ React.createElement("style", null, `
+        @keyframes fadeIn { from {opacity:0; transform: translate(-50%,8px)} to {opacity:1; transform: translate(-50%,0)} }
+        * { -webkit-tap-highlight-color: transparent; }
+        ::-webkit-scrollbar { width: 0; height: 0; }
+        @media print {
+          html, body { height: auto !important; background: white !important; }
+          #root, #root > div { height: auto !important; overflow: visible !important; max-width: none !important; }
+        }
+      `), /* @__PURE__ */ React.createElement("div", { className: "hidden lg:flex flex-col w-60 shrink-0 h-full text-white", style: { background: "#0f172a" } }, /* @__PURE__ */ React.createElement("div", { className: "px-5 py-6 flex items-center gap-2.5 border-b border-white/10" }, /* @__PURE__ */ React.createElement("div", { className: "w-9 h-9 rounded-xl flex items-center justify-center shrink-0", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Store, { size: 18 })), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-sm truncate" }, data.toko.nama || "Kasir Toko")), /* @__PURE__ */ React.createElement("div", { className: "flex-1 py-4 px-3 space-y-1" }, [
+    { id: "dashboard", label: "Beranda", icon: Store },
+    { id: "pos", label: "Transaksi", icon: ShoppingCart },
+    { id: "riwayat", label: "Riwayat", icon: History },
+    { id: "laporan", label: "Laporan", icon: BarChart3 },
+    { id: "lainnya", label: "Lainnya", icon: Menu }
+  ].map((t) => {
+    const Icon2 = t.icon;
+    const active = tab === t.id && !screen;
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: t.id,
+        onClick: () => {
+          setTab(t.id);
+          setScreen(null);
+        },
+        className: "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold relative transition-colors",
+        style: active ? { background: BRAND.bg } : {}
+      },
+      /* @__PURE__ */ React.createElement(Icon2, { size: 18, className: active ? "text-white" : "text-white/60" }),
+      /* @__PURE__ */ React.createElement("span", { className: active ? "text-white" : "text-white/60" }, t.label),
+      t.id === "pos" && cart.length > 0 && /* @__PURE__ */ React.createElement("span", { className: "ml-auto w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center font-bold" }, cart.length)
+    );
+  })), /* @__PURE__ */ React.createElement("div", { className: "px-5 py-4 border-t border-white/10" }, /* @__PURE__ */ React.createElement("p", { className: "text-[11px] text-white/40 truncate" }, session.user.email))), /* @__PURE__ */ React.createElement("div", { className: "flex-1 flex flex-col h-full overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "flex-1 overflow-y-auto pb-16 lg:pb-0" }, /* @__PURE__ */ React.createElement("div", { className: "lg:w-full" }, screen ? /* @__PURE__ */ React.createElement(ScreenRouter, { screen, ctx }) : /* @__PURE__ */ React.createElement(React.Fragment, null, tab === "dashboard" && /* @__PURE__ */ React.createElement(Dashboard, { ctx }), tab === "pos" && /* @__PURE__ */ React.createElement(PosScreen, { ctx }), tab === "riwayat" && /* @__PURE__ */ React.createElement(RiwayatScreen, { ctx }), tab === "laporan" && /* @__PURE__ */ React.createElement(LaporanScreen, { ctx }), tab === "lainnya" && /* @__PURE__ */ React.createElement(LainnyaScreen, { ctx })))), !screen && /* @__PURE__ */ React.createElement("div", { className: "lg:hidden fixed bottom-0 left-0 right-0 flex items-stretch bg-white border-t border-stone-200 z-30", style: { paddingBottom: "env(safe-area-inset-bottom)" } }, [
+    { id: "dashboard", label: "Beranda", icon: Store },
+    { id: "pos", label: "Transaksi", icon: ShoppingCart },
+    { id: "riwayat", label: "Riwayat", icon: History },
+    { id: "laporan", label: "Laporan", icon: BarChart3 },
+    { id: "lainnya", label: "Lainnya", icon: Menu }
+  ].map((t) => {
+    const Icon2 = t.icon;
+    const active = tab === t.id;
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: t.id,
+        onClick: () => {
+          setTab(t.id);
+          setScreen(null);
+        },
+        className: "flex-1 flex flex-col items-center gap-0.5 py-2 relative"
+      },
+      t.id === "pos" && cart.length > 0 && /* @__PURE__ */ React.createElement("span", { className: "absolute top-1 right-[26%] w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center font-bold" }, cart.length),
+      /* @__PURE__ */ React.createElement(Icon2, { size: 20, color: active ? BRAND.bg : "#a8a29e", strokeWidth: active ? 2.4 : 2 }),
+      /* @__PURE__ */ React.createElement("span", { className: "text-[10px] font-medium", style: { color: active ? BRAND.bg : "#a8a29e" } }, t.label)
+    );
+  }))), /* @__PURE__ */ React.createElement(Toast, { msg: toast }));
+}
+function ScreenRouter({ screen, ctx }) {
+  const back = () => ctx.goBackScreen();
+  if (screen.name === "item-list") return /* @__PURE__ */ React.createElement(ItemListScreen, { ctx, onBack: back, pickMode: screen.pickMode });
+  if (screen.name === "item-form") return /* @__PURE__ */ React.createElement(ItemFormScreen, { ctx, onBack: back, item: screen.item, defaultJenis: screen.defaultJenis });
+  if (screen.name === "checkout") return /* @__PURE__ */ React.createElement(CheckoutScreen, { ctx, onBack: back });
+  if (screen.name === "trx-detail") return /* @__PURE__ */ React.createElement(TrxDetailScreen, { ctx, onBack: back, trx: screen.trx });
+  if (screen.name === "pelanggan") return /* @__PURE__ */ React.createElement(PelangganScreen, { ctx, onBack: back });
+  if (screen.name === "mekanik") return /* @__PURE__ */ React.createElement(MekanikScreen, { ctx, onBack: back });
+  if (screen.name === "metode") return /* @__PURE__ */ React.createElement(MetodeScreen, { ctx, onBack: back });
+  if (screen.name === "toko-edit") return /* @__PURE__ */ React.createElement(TokoEditScreen, { ctx, onBack: back });
+  if (screen.name === "import-data") return /* @__PURE__ */ React.createElement(ImportDataScreen, { ctx, onBack: back });
+  if (screen.name === "printer-settings") return /* @__PURE__ */ React.createElement(PrinterSettingsScreen, { ctx, onBack: back });
+  if (screen.name === "servis-hp") return /* @__PURE__ */ React.createElement(ServisHpScreen, { ctx, onBack: back });
+  if (screen.name === "servis-hp-detail") return /* @__PURE__ */ React.createElement(ServisHpDetailScreen, { ctx, onBack: back, trxId: screen.trxId });
+  if (screen.name === "pin-gate") return /* @__PURE__ */ React.createElement(PinGateScreen, { ctx, onBack: back, target: screen.target });
+  if (screen.name === "security") return /* @__PURE__ */ React.createElement(SecurityScreen, { ctx, onBack: back });
+  if (screen.name === "customer-picker") return /* @__PURE__ */ React.createElement(CustomerPickerScreen, { ctx, onBack: back });
+  return null;
+}
+function Dashboard({ ctx }) {
+  const { data, setTab, setScreen, openItemMenu } = ctx;
+  const isEmpty = data.barang.length === 0;
+  const lowStockItems = data.barang.filter((b) => b.jenis === "barang" && b.stok !== null && b.stok !== void 0 && b.stok <= 2);
+  const today = todayStr();
+  const trxToday = data.transaksi.filter((t) => (t.tanggal || "").slice(0, 10) === today);
+  const totalToday = trxToday.reduce((s, t) => s + Number(t.bayar || t.total || 0), 0);
+  const profitToday = trxToday.reduce((s, t) => s + Number(t.profit || 0), 0);
+  const thisMonthKey = today.slice(0, 7);
+  const trxBulanIni = data.transaksi.filter((t) => (t.tanggal || "").slice(0, 7) === thisMonthKey);
+  const topProduk = useMemo(() => {
+    const agg = {};
+    data.transaksi.forEach((t) => (t.items || []).forEach((it) => {
+      if (!agg[it.nama]) agg[it.nama] = { nama: it.nama, qty: 0, omzet: 0 };
+      agg[it.nama].qty += Number(it.qty) || 0;
+      agg[it.nama].omzet += Number(it.subtotal) || 0;
+    }));
+    return Object.values(agg).sort((a, b) => b.omzet - a.omzet).slice(0, 5);
+  }, [data.transaksi]);
+  const trend7Hari = useMemo(() => {
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = /* @__PURE__ */ new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      const total = data.transaksi.filter((t) => (t.tanggal || "").slice(0, 10) === key).reduce((s, t) => s + Number(t.bayar || t.total || 0), 0);
+      days.push({ key, label: d.toLocaleDateString("id-ID", { day: "numeric", month: "short" }), total });
+    }
+    return days;
+  }, [data.transaksi]);
+  const menuItems = [
+    { label: "Item / Layanan", icon: Package, action: openItemMenu },
+    { label: "Transaksi Baru", icon: ShoppingCart, action: () => setTab("pos") },
+    { label: "Riwayat", icon: History, action: () => setTab("riwayat") },
+    { label: "Laporan", icon: BarChart3, action: () => setTab("laporan") },
+    { label: "Pelanggan", icon: Users, action: () => setScreen({ name: "pelanggan" }) },
+    { label: "Mekanik / Staff", icon: Wrench, action: () => setScreen({ name: "mekanik" }) }
+  ];
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "hidden lg:block px-6 pt-6 pb-2" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-5" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { className: "text-stone-400 text-xs font-medium mb-1" }, (/* @__PURE__ */ new Date()).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" })), /* @__PURE__ */ React.createElement("h1", { className: "text-2xl font-bold text-stone-800" }, data.toko.nama || "Toko Saya")), /* @__PURE__ */ React.createElement("button", { onClick: () => setTab("pos"), className: "rounded-xl px-5 py-2.5 font-bold text-white shadow-sm flex items-center gap-2 active:scale-[0.98] transition", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Plus, { size: 18 }), " Transaksi Baru")), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-4 mb-2" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl p-5 border border-stone-100 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { className: "text-stone-400 text-xs font-medium mb-1" }, "Penjualan Hari Ini"), /* @__PURE__ */ React.createElement("p", { className: "text-2xl font-bold text-stone-800" }, rupiah(totalToday))), /* @__PURE__ */ React.createElement("div", { className: "w-11 h-11 rounded-xl flex items-center justify-center shrink-0", style: { background: "#dbeafe" } }, /* @__PURE__ */ React.createElement(TrendingUp, { size: 20, style: { color: BRAND.bg } }))), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl p-5 border border-stone-100 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { className: "text-stone-400 text-xs font-medium mb-1" }, "Profit Hari Ini"), /* @__PURE__ */ React.createElement("p", { className: "text-2xl font-bold text-stone-800" }, rupiah(profitToday))), /* @__PURE__ */ React.createElement("div", { className: "w-11 h-11 rounded-xl flex items-center justify-center shrink-0", style: { background: "#dcfce7" } }, /* @__PURE__ */ React.createElement(BarChart3, { size: 20, className: "text-emerald-600" }))), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl p-5 border border-stone-100 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { className: "text-stone-400 text-xs font-medium mb-1" }, "Transaksi Bulan Ini"), /* @__PURE__ */ React.createElement("p", { className: "text-2xl font-bold text-stone-800" }, trxBulanIni.length)), /* @__PURE__ */ React.createElement("div", { className: "w-11 h-11 rounded-xl flex items-center justify-center shrink-0", style: { background: "#f3e8ff" } }, /* @__PURE__ */ React.createElement(Receipt, { size: 20, className: "text-purple-600" }))))), /* @__PURE__ */ React.createElement("div", { className: "hidden lg:grid grid-cols-3 gap-4 px-6 mt-3" }, /* @__PURE__ */ React.createElement("div", { className: "col-span-2 space-y-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-5" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700 mb-4" }, "Grafik Penjualan (7 Hari Terakhir)"), /* @__PURE__ */ React.createElement(SalesTrendChart, { data: trend7Hari })), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-5" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700 mb-3" }, "Menu"), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-2.5" }, menuItems.map((m, i) => {
+    const Icon2 = m.icon;
+    return /* @__PURE__ */ React.createElement("button", { key: i, onClick: m.action, className: "rounded-xl py-3.5 px-2 flex flex-col items-center gap-2 border border-stone-100 active:scale-[0.97] transition hover:bg-stone-50" }, /* @__PURE__ */ React.createElement("div", { className: "w-9 h-9 rounded-xl flex items-center justify-center", style: { background: "#dbeafe" } }, /* @__PURE__ */ React.createElement(Icon2, { size: 17, style: { color: BRAND.bg } })), /* @__PURE__ */ React.createElement("span", { className: "text-[11px] font-semibold text-stone-600 text-center leading-tight" }, m.label));
+  })))), /* @__PURE__ */ React.createElement("div", { className: "space-y-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-5" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700 mb-3" }, "Ringkasan Toko"), /* @__PURE__ */ React.createElement("div", { className: "space-y-3" }, [
+    { label: "Total Produk", value: data.barang.length, icon: Package, bg: "#dbeafe", color: BRAND.bg },
+    { label: "Total Pelanggan", value: data.pelanggan.length, icon: Users, bg: "#dcfce7", color: "#16a34a" },
+    { label: "Mekanik / Staff", value: data.mekanik.length, icon: Wrench, bg: "#fef3c7", color: "#d97706" },
+    { label: "Transaksi Hari Ini", value: trxToday.length, icon: ShoppingCart, bg: "#f3e8ff", color: "#9333ea" }
+  ].map((s, i) => {
+    const Icon2 = s.icon;
+    return /* @__PURE__ */ React.createElement("div", { key: i, className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "w-9 h-9 rounded-xl flex items-center justify-center shrink-0", style: { background: s.bg } }, /* @__PURE__ */ React.createElement(Icon2, { size: 16, style: { color: s.color } })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { className: "text-base font-bold text-stone-800 leading-tight" }, s.value), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400" }, s.label)));
+  }))), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-5" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-3" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700" }, "Stok Menipis"), lowStockItems.length > 0 && /* @__PURE__ */ React.createElement("button", { onClick: openItemMenu, className: "text-xs font-semibold", style: { color: BRAND.bg } }, "Lihat semua")), lowStockItems.length === 0 ? /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 py-2" }, "Semua stok item aman \u{1F44D}") : /* @__PURE__ */ React.createElement("div", { className: "divide-y divide-stone-50" }, lowStockItems.slice(0, 5).map((b) => /* @__PURE__ */ React.createElement("button", { key: b.id, onClick: () => setScreen({ name: "item-form", item: b }), className: "w-full flex items-center justify-between py-2.5 text-left" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-700 truncate pr-2" }, b.nama), /* @__PURE__ */ React.createElement("span", { className: "text-xs font-bold text-rose-500 shrink-0" }, "Stok ", b.stok))), lowStockItems.length > 5 && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 pt-2" }, "+", lowStockItems.length - 5, " item lainnya"))))), topProduk.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "hidden lg:block px-6 mt-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-5" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-3" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700" }, "Top Produk / Layanan"), /* @__PURE__ */ React.createElement("button", { onClick: () => setTab("laporan"), className: "text-xs font-semibold", style: { color: BRAND.bg } }, "Lihat semua")), /* @__PURE__ */ React.createElement("div", { className: "divide-y divide-stone-50" }, topProduk.map((p, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex items-center gap-3 py-2.5" }, /* @__PURE__ */ React.createElement("span", { className: "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0", style: { background: "#dbeafe", color: BRAND.bg } }, i + 1), /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700 flex-1 truncate" }, p.nama), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 shrink-0" }, p.qty, " transaksi"), /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700 shrink-0 w-28 text-right" }, rupiah(p.omzet))))))), /* @__PURE__ */ React.createElement("div", { className: "lg:hidden px-4 pt-5 pb-6 text-white", style: { background: `linear-gradient(160deg, ${BRAND.bg}, ${BRAND.bgDark})` } }, /* @__PURE__ */ React.createElement("p", { className: "text-white/70 text-xs font-medium mb-1" }, (/* @__PURE__ */ new Date()).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" })), /* @__PURE__ */ React.createElement("h1", { className: "text-xl font-bold mb-4 truncate" }, data.toko.nama || "Toko Saya"), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-2.5" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white/10 rounded-2xl p-3.5 backdrop-blur" }, /* @__PURE__ */ React.createElement("p", { className: "text-white/60 text-[11px] mb-1" }, "Penjualan Hari Ini"), /* @__PURE__ */ React.createElement("p", { className: "text-lg font-bold" }, rupiah(totalToday))), /* @__PURE__ */ React.createElement("div", { className: "bg-white/10 rounded-2xl p-3.5 backdrop-blur" }, /* @__PURE__ */ React.createElement("p", { className: "text-white/60 text-[11px] mb-1" }, "Profit Hari Ini"), /* @__PURE__ */ React.createElement("p", { className: "text-lg font-bold" }, rupiah(profitToday))))), /* @__PURE__ */ React.createElement("div", { className: "lg:hidden px-4 -mt-3" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setTab("pos"), className: "w-full rounded-2xl py-3.5 font-bold text-white shadow-lg flex items-center justify-center gap-2 active:scale-[0.98] transition", style: { background: BRAND.accent } }, /* @__PURE__ */ React.createElement(Plus, { size: 20 }), " Transaksi Baru")), isEmpty && /* @__PURE__ */ React.createElement("div", { className: "px-4 lg:px-6 mt-4" }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 border border-dashed", style: { borderColor: BRAND.accent, background: "#eff6ff" } }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700 mb-1" }, "Mulai dari sini \u{1F44B}"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-500 mb-3" }, "Toko masih kosong. Isi dulu profil toko & tambahkan item/layanan pertamamu supaya bisa mulai transaksi."), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen({ name: "toko-edit" }), className: "flex-1 py-2 rounded-xl text-xs font-bold border", style: { borderColor: BRAND.bg, color: BRAND.bg } }, "Isi Profil Toko"), /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen({ name: "item-form", item: null }), className: "flex-1 py-2 rounded-xl text-xs font-bold text-white", style: { background: BRAND.bg } }, "+ Tambah Item")))), /* @__PURE__ */ React.createElement("div", { className: "lg:hidden px-4 mt-5" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700 mb-2.5" }, "Menu"), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-2.5" }, menuItems.map((m, i) => {
+    const Icon2 = m.icon;
+    return /* @__PURE__ */ React.createElement("button", { key: i, onClick: m.action, className: "bg-white rounded-2xl py-4 px-2 flex flex-col items-center gap-2 shadow-sm border border-stone-100 active:scale-[0.97] transition" }, /* @__PURE__ */ React.createElement("div", { className: "w-10 h-10 rounded-xl flex items-center justify-center", style: { background: "#dbeafe" } }, /* @__PURE__ */ React.createElement(Icon2, { size: 19, style: { color: BRAND.bg } })), /* @__PURE__ */ React.createElement("span", { className: "text-[11.5px] font-semibold text-stone-600 text-center leading-tight" }, m.label));
+  }))), /* @__PURE__ */ React.createElement("div", { className: "px-4 lg:px-6 mt-5 mb-4" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-2.5" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700" }, "Transaksi Terakhir"), /* @__PURE__ */ React.createElement("button", { onClick: () => setTab("riwayat"), className: "text-xs font-semibold", style: { color: BRAND.bg } }, "Lihat semua")), /* @__PURE__ */ React.createElement("div", { className: "hidden lg:block bg-white rounded-2xl border border-stone-100 overflow-hidden" }, /* @__PURE__ */ React.createElement("table", { className: "w-full text-sm" }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", { className: "border-b border-stone-100 text-left" }, /* @__PURE__ */ React.createElement("th", { className: "px-4 py-3 text-xs font-semibold text-stone-400 uppercase" }, "Waktu"), /* @__PURE__ */ React.createElement("th", { className: "px-4 py-3 text-xs font-semibold text-stone-400 uppercase" }, "Kode"), /* @__PURE__ */ React.createElement("th", { className: "px-4 py-3 text-xs font-semibold text-stone-400 uppercase" }, "Pelanggan"), /* @__PURE__ */ React.createElement("th", { className: "px-4 py-3 text-xs font-semibold text-stone-400 uppercase text-right" }, "Total"), /* @__PURE__ */ React.createElement("th", { className: "px-4 py-3 text-xs font-semibold text-stone-400 uppercase text-right" }, "Status"))), /* @__PURE__ */ React.createElement("tbody", null, data.transaksi.slice(-6).reverse().map((t) => /* @__PURE__ */ React.createElement("tr", { key: t.id, onClick: () => setScreen({ name: "trx-detail", trx: t }), className: "border-b border-stone-50 last:border-0 cursor-pointer hover:bg-stone-50" }, /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 text-stone-500" }, fmtDate(t.tanggal)), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 text-stone-500" }, "#", t.kode), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 font-semibold text-stone-700" }, t.pelanggan_nama || "Umum"), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 font-bold text-stone-700 text-right" }, rupiah(t.bayar || t.total)), /* @__PURE__ */ React.createElement("td", { className: "px-4 py-3 text-right" }, /* @__PURE__ */ React.createElement(Badge, { tone: "green" }, "Lunas")))), data.transaksi.length === 0 && /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", { colSpan: 5, className: "py-8 text-center text-sm text-stone-400" }, "Belum ada transaksi"))))), /* @__PURE__ */ React.createElement("div", { className: "lg:hidden bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden" }, data.transaksi.slice(-4).reverse().map((t) => /* @__PURE__ */ React.createElement("div", { key: t.id, className: "px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "min-w-0" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700 truncate" }, t.pelanggan_nama || "Umum"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400" }, fmtDate(t.tanggal))), /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700 shrink-0 ml-2" }, rupiah(t.bayar || t.total)))), data.transaksi.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "py-8 text-center text-sm text-stone-400" }, "Belum ada transaksi"))), !isEmpty && lowStockItems.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "lg:hidden px-4 mb-6" }, /* @__PURE__ */ React.createElement("button", { onClick: openItemMenu, className: "w-full text-left rounded-2xl p-4 border flex items-center gap-3", style: { borderColor: "#fda4af", background: "#fff1f2" } }, /* @__PURE__ */ React.createElement("div", { className: "w-9 h-9 rounded-xl bg-rose-100 flex items-center justify-center shrink-0" }, /* @__PURE__ */ React.createElement("span", { className: "text-rose-500 text-base" }, "\u26A0")), /* @__PURE__ */ React.createElement("div", { className: "min-w-0 flex-1" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-rose-600" }, lowStockItems.length, " item stoknya menipis"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-rose-400 truncate" }, lowStockItems.slice(0, 3).map((b) => b.nama).join(", "), lowStockItems.length > 3 ? ", ..." : "")), /* @__PURE__ */ React.createElement(ChevronRight, { size: 16, className: "text-rose-400 shrink-0" }))));
+}
+function PosScreen({ ctx }) {
+  const { data, cart, setCart, addToCart, setScreen, notify, cartMeta } = ctx;
+  const [q, setQ] = useState("");
+  const [filter, setFilter] = useState("semua");
+  const [scanOpen, setScanOpen] = useState(false);
+  const searchRef = React.useRef(null);
+  const [servisList, setServisList] = useState([]);
+  const [servisLoading, setServisLoading] = useState(false);
+  const [servisError, setServisError] = useState("");
+  useEffect(() => {
+    var _a;
+    (_a = searchRef.current) == null ? void 0 : _a.focus();
+  }, []);
+  useEffect(() => {
+    if (filter !== "servisan") return;
+    let cancelled = false;
+    (async () => {
+      setServisLoading(true);
+      setServisError("");
+      try {
+        const { data: rows, error } = await sbServis.from("services_kasir_view").select("id, service_number, customer_name, customer_phone, device_brand, device_model, complaint, status, total_cost, remaining_balance, created_at").order("created_at", { ascending: false }).limit(200);
+        if (error) throw error;
+        if (!cancelled) setServisList(rows || []);
+      } catch (e) {
+        if (!cancelled) setServisError(e.message || "Gagal mengambil data servis");
+      } finally {
+        if (!cancelled) setServisLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [filter]);
+  const servisFiltered = useMemo(() => {
+    if (!q) return servisList;
+    const hay = q.toLowerCase();
+    return servisList.filter((s) => `${s.service_number} ${s.customer_name} ${s.customer_phone} ${s.device_brand} ${s.device_model}`.toLowerCase().includes(hay));
+  }, [servisList, q]);
+  const addServisToCart = (s) => {
+    const amount = Number(s.remaining_balance) > 0 ? Number(s.remaining_balance) : Number(s.total_cost) || 0;
+    if (amount <= 0) return notify("Servis ini belum punya biaya yang diisi");
+    const namaItem = `Servis ${s.device_brand || ""} ${s.device_model || ""}`.trim() + ` (#${s.service_number})`;
+    addToCart({ id: `servis-${s.id}`, nama: namaItem, satuan: "jasa", jenis: "jasa", harga_eceran: amount, harga_grosir: amount });
+  };
+  const list = useMemo(() => {
+    return data.barang.filter((b) => {
+      if (!b.aktif && b.aktif !== void 0) return false;
+      if (filter === "barang" && b.jenis !== "barang") return false;
+      if (filter === "jasa" && b.jenis !== "jasa") return false;
+      if (q && !b.nama.toLowerCase().includes(q.toLowerCase()) && !(b.barcode || "").toLowerCase().includes(q.toLowerCase())) return false;
+      return true;
+    }).slice(0, 60);
+  }, [data.barang, q, filter]);
+  const cartTotal = cart.reduce((s, c) => s + (c.mode === "grosir" ? c.harga_grosir : c.harga_eceran) * c.qty, 0);
+  const cartQty = cart.reduce((s, c) => s + c.qty, 0);
+  const selectedPelanggan = data.pelanggan.find((p) => p.id === cartMeta.pelanggan_id);
+  const handleScanResult = (code) => {
+    setScanOpen(false);
+    const item = data.barang.find((b) => (b.barcode || "").trim() && b.barcode.trim().toLowerCase() === code.trim().toLowerCase());
+    if (item) {
+      addToCart(item);
+    } else {
+      notify(`Barcode "${code}" tidak ditemukan`);
+    }
+  };
+  const handleSearchKeyDown = (e) => {
+    if (e.key !== "Enter") return;
+    const code = q.trim();
+    if (!code) return;
+    const exact = data.barang.find((b) => (b.barcode || "").trim().toLowerCase() === code.toLowerCase());
+    if (exact) {
+      addToCart(exact);
+      setQ("");
+    } else {
+      notify(`Barcode "${code}" tidak ditemukan`);
+    }
+  };
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-2" }, /* @__PURE__ */ React.createElement("div", { className: "sticky top-0 z-20 text-white px-4 pt-4 pb-3", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-3" }, /* @__PURE__ */ React.createElement("h1", { className: "text-[17px] font-bold" }, "Transaksi Baru"), /* @__PURE__ */ React.createElement("button", { onClick: () => setScanOpen(true), className: "flex items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-full text-xs font-semibold" }, /* @__PURE__ */ React.createElement(Search, { size: 14 }), " Scan Barcode")), /* @__PURE__ */ React.createElement("div", { className: "bg-white/15 rounded-xl flex items-center px-3 py-2.5 gap-2" }, /* @__PURE__ */ React.createElement(Search, { size: 17, className: "text-white/70" }), /* @__PURE__ */ React.createElement("input", { ref: searchRef, value: q, onChange: (e) => setQ(e.target.value), onKeyDown: handleSearchKeyDown, placeholder: "Cari item / layanan, atau scan di sini...", className: "bg-transparent outline-none text-sm text-white placeholder-white/50 flex-1" })), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mt-3" }, ["semua", "barang", "jasa", "servisan"].map((f) => /* @__PURE__ */ React.createElement("button", { key: f, onClick: () => setFilter(f), className: `px-3 py-1.5 rounded-full text-xs font-semibold capitalize ${filter === f ? "bg-white" : "bg-white/15 text-white"}`, style: filter === f ? { color: BRAND.bg } : {} }, f)))), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-3" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen({ name: "customer-picker" }), className: "w-full bg-white rounded-2xl p-3.5 border border-stone-100 shadow-sm flex items-center gap-3 mb-3" }, /* @__PURE__ */ React.createElement("div", { className: "w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center shrink-0" }, /* @__PURE__ */ React.createElement(Users, { size: 18, className: "text-stone-400" })), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0 text-left" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700" }, selectedPelanggan ? selectedPelanggan.nama : "Pelanggan"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 truncate" }, selectedPelanggan ? selectedPelanggan.no_hp || "Tanpa nomor HP" : "Silahkan pilih pelanggan (opsional)")), /* @__PURE__ */ React.createElement("span", { className: "text-xs font-bold px-3 py-1.5 rounded-full text-white shrink-0", style: { background: BRAND.bg } }, selectedPelanggan ? "Ganti" : "Cari"))), filter === "servisan" ? /* @__PURE__ */ React.createElement("div", { className: "px-4" }, servisLoading && /* @__PURE__ */ React.createElement("div", { className: "py-16 flex flex-col items-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-8 h-8 border-4 border-stone-200 rounded-full animate-spin mb-3", style: { borderTopColor: BRAND.bg } }), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-400" }, "Mengambil data servis...")), !servisLoading && servisError && /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 border border-rose-200 bg-rose-50" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-rose-600 mb-1" }, "Gagal memuat data"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-rose-500" }, servisError)), !servisLoading && !servisError && /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden" }, servisFiltered.map((s) => {
+    const amount = Number(s.remaining_balance) > 0 ? Number(s.remaining_balance) : Number(s.total_cost) || 0;
+    const already = cart.some((c) => c.barang_id === `servis-${s.id}`);
+    return /* @__PURE__ */ React.createElement("button", { key: s.id, onClick: () => addServisToCart(s), disabled: already, className: "w-full text-left px-4 py-3.5 disabled:opacity-50" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-1" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700" }, "#", s.service_number), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-bold", style: { color: BRAND.bg } }, rupiah(amount))), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-600" }, s.customer_name, " \xB7 ", s.device_brand, " ", s.device_model), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 mt-0.5" }, already ? "\u2713 Sudah di keranjang" : Number(s.remaining_balance) > 0 ? "Sisa bayar" : "Total biaya"));
+  }), servisFiltered.length === 0 && /* @__PURE__ */ React.createElement(EmptyState, { icon: Wrench, title: "Tidak ditemukan", hint: q ? "Coba kata kunci lain" : "Belum ada data servis" }))) : /* @__PURE__ */ React.createElement("div", { className: "px-4 grid grid-cols-2 lg:grid-cols-3 gap-2.5" }, list.map((item) => {
+    var _a;
+    const inCart = cart.filter((c) => c.barang_id === item.id).reduce((s, c) => s + c.qty, 0);
+    return /* @__PURE__ */ React.createElement("button", { key: item.id, onClick: () => addToCart(item), className: "text-left bg-white rounded-2xl p-4 border border-stone-100 shadow-sm relative active:scale-[0.97] transition" }, inCart > 0 && /* @__PURE__ */ React.createElement("span", { className: "absolute top-3 right-3 w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center", style: { background: BRAND.accent } }, inCart), /* @__PURE__ */ React.createElement("div", { className: "w-20 h-20 rounded-xl flex items-center justify-center mb-3 overflow-hidden", style: { background: item.jenis === "jasa" ? "#e6f0ea" : "#dbeafe" } }, item.gambar ? /* @__PURE__ */ React.createElement("img", { src: item.gambar, alt: "", className: "w-full h-full object-cover" }) : item.jenis === "jasa" ? /* @__PURE__ */ React.createElement(Wrench, { size: 28, style: { color: "#3d7a56" } }) : /* @__PURE__ */ React.createElement(Package, { size: 28, style: { color: BRAND.bg } })), /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700 leading-snug line-clamp-2 min-h-[40px]" }, item.nama), /* @__PURE__ */ React.createElement("p", { className: "text-base font-bold mt-1.5", style: { color: BRAND.bg } }, rupiah(item.harga_eceran)), item.jenis === "barang" && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 mt-1" }, "Stok: ", (_a = item.stok) != null ? _a : 0));
+  }), list.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "col-span-2" }, /* @__PURE__ */ React.createElement(EmptyState, { icon: Search, title: "Tidak ditemukan", hint: "Coba kata kunci lain" }))), cart.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-16 left-0 right-0 z-30 px-4 pb-2" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen({ name: "checkout" }), className: "w-full rounded-2xl shadow-xl px-4 py-3.5 flex items-center justify-between text-white active:scale-[0.98] transition", style: { background: BRAND.accent } }, /* @__PURE__ */ React.createElement("span", { className: "flex items-center gap-2 font-semibold text-sm" }, /* @__PURE__ */ React.createElement(ShoppingCart, { size: 18 }), " ", cartQty, " item"), /* @__PURE__ */ React.createElement("span", { className: "font-bold" }, rupiah(cartTotal), " ", /* @__PURE__ */ React.createElement(ChevronRight, { size: 16, className: "inline" })))), scanOpen && /* @__PURE__ */ React.createElement(ScannerModal, { title: "Scan Barcode Item", onDetected: handleScanResult, onClose: () => setScanOpen(false) }));
+}
+function CheckoutScreen({ ctx, onBack }) {
+  var _a, _b, _c, _d, _e;
+  const { data, update, cart, setCart, cartMeta, setCartMeta, notify, setTab, setScreen } = ctx;
+  const [bayarInput, setBayarInput] = useState("");
+  const [diskonTouched, setDiskonTouched] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmBayar, setConfirmBayar] = useState("");
+  const [completedTrx, setCompletedTrx] = useState(null);
+  const subtotal = cart.reduce((s, c) => s + (c.mode === "grosir" ? c.harga_grosir : c.harga_eceran) * c.qty, 0);
+  const selectedPelanggan = data.pelanggan.find((p) => p.id === cartMeta.pelanggan_id);
+  const diskonPersen = selectedPelanggan ? Number(selectedPelanggan.diskon_persen) || 0 : 0;
+  useEffect(() => {
+    if (diskonPersen > 0 && !diskonTouched) {
+      const auto = Math.round(subtotal * diskonPersen / 100);
+      setCartMeta((m) => ({ ...m, diskon: auto }));
+    }
+  }, [cartMeta.pelanggan_id, subtotal]);
+  const diskon = Number(cartMeta.diskon) || 0;
+  const total = Math.max(0, subtotal - diskon);
+  const bayar = Number(bayarInput) || 0;
+  const kembalian = bayar - total;
+  const changeQty = (idx, delta) => {
+    setCart((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], qty: Math.max(0, next[idx].qty + delta) };
+      return next.filter((c) => c.qty > 0);
+    });
+  };
+  const toggleMode = (idx) => {
+    setCart((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], mode: next[idx].mode === "grosir" ? "eceran" : "grosir" };
+      return next;
+    });
+  };
+  const removeItem = (idx) => setCart((prev) => prev.filter((_, i) => i !== idx));
+  const openConfirm = () => {
+    if (cart.length === 0) return;
+    setConfirmBayar(bayarInput || String(total));
+    setConfirmOpen(true);
+  };
+  const finish = () => {
+    const bayarFinal = Number(confirmBayar) || total;
+    if (cart.length === 0) return;
+    const pelanggan = data.pelanggan.find((p) => p.id === cartMeta.pelanggan_id);
+    const mekanik = data.mekanik.find((m) => m.id === cartMeta.mekanik_id);
+    let profit = 0;
+    const items = cart.map((c) => {
+      const harga = c.mode === "grosir" ? c.harga_grosir : c.harga_eceran;
+      const barangRef = data.barang.find((b) => b.id === c.barang_id);
+      const hpp = barangRef ? Number(barangRef.harga_beli) || 0 : 0;
+      profit += (harga - hpp) * c.qty;
+      return { barang_id: c.barang_id, nama: c.nama, harga, qty: c.qty, satuan: c.satuan, mode: c.mode, subtotal: harga * c.qty };
+    });
+    const trx = {
+      id: uid(),
+      kode: genKode(),
+      tanggal: (/* @__PURE__ */ new Date()).toISOString(),
+      pelanggan_id: cartMeta.pelanggan_id || null,
+      pelanggan_nama: pelanggan ? pelanggan.nama : "Umum",
+      mekanik_id: cartMeta.mekanik_id || null,
+      mekanik_nama: mekanik ? mekanik.nama : "",
+      metode_bayar_id: cartMeta.metode_bayar_id || data.metode_bayar[0] && data.metode_bayar[0].id,
+      items,
+      diskon,
+      total,
+      bayar: bayarFinal || total,
+      profit,
+      status_bayar: bayarFinal >= total ? 1 : 0,
+      keterangan: bayarFinal < total ? "DP / belum lunas" : ""
+    };
+    update("transaksi", (prev) => [...prev, trx]);
+    update("barang", (prev) => prev.map((b) => {
+      const line = items.find((it) => it.barang_id === b.id);
+      if (line && b.jenis === "barang" && b.stok != null) return { ...b, stok: b.stok - line.qty };
+      return b;
+    }));
+    setCart([]);
+    setCartMeta({ pelanggan_id: null, mekanik_id: null, metode_bayar_id: null, diskon: 0 });
+    setConfirmOpen(false);
+    setCompletedTrx(trx);
+  };
+  if (completedTrx) {
+    const kembalianFinal = Math.max(0, (completedTrx.bayar || 0) - completedTrx.total);
+    return /* @__PURE__ */ React.createElement("div", { className: "h-full flex flex-col items-center justify-center px-6 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mb-5" }, /* @__PURE__ */ React.createElement(Check, { size: 36, className: "text-emerald-600" })), /* @__PURE__ */ React.createElement("p", { className: "text-xl font-bold text-stone-800 mb-1" }, "Transaksi Berhasil Disimpan!"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-400 mb-6" }, "#", completedTrx.kode), /* @__PURE__ */ React.createElement("div", { className: "w-full max-w-xs bg-white rounded-2xl border border-stone-100 p-4 space-y-2 mb-8" }, /* @__PURE__ */ React.createElement("div", { className: "flex justify-between text-sm" }, /* @__PURE__ */ React.createElement("span", { className: "text-stone-500" }, "Total Harga"), /* @__PURE__ */ React.createElement("span", { className: "font-bold" }, rupiah(completedTrx.total))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between text-sm" }, /* @__PURE__ */ React.createElement("span", { className: "text-stone-500" }, completedTrx.bayar < completedTrx.total ? "Jumlah DP" : "Jumlah Bayar"), /* @__PURE__ */ React.createElement("span", { className: "font-bold" }, rupiah(completedTrx.bayar))), completedTrx.bayar < completedTrx.total ? /* @__PURE__ */ React.createElement("div", { className: "flex justify-between text-sm" }, /* @__PURE__ */ React.createElement("span", { className: "text-stone-500" }, "Sisa Belum Lunas"), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-amber-600" }, rupiah(completedTrx.total - completedTrx.bayar))) : /* @__PURE__ */ React.createElement("div", { className: "flex justify-between text-sm" }, /* @__PURE__ */ React.createElement("span", { className: "text-stone-500" }, "Kembalian"), /* @__PURE__ */ React.createElement("span", { className: "font-bold" }, rupiah(kembalianFinal)))), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-3 w-full max-w-xs mb-6" }, /* @__PURE__ */ React.createElement("button", { onClick: () => {
+      setTab("dashboard");
+      setScreen(null);
+    }, className: "flex flex-col items-center gap-1.5" }, /* @__PURE__ */ React.createElement("div", { className: "w-12 h-12 rounded-full flex items-center justify-center text-white", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Check, { size: 20 })), /* @__PURE__ */ React.createElement("span", { className: "text-xs font-semibold text-stone-600" }, "Selesai")), /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen({ name: "trx-detail", trx: completedTrx }), className: "flex flex-col items-center gap-1.5" }, /* @__PURE__ */ React.createElement("div", { className: "w-12 h-12 rounded-full flex items-center justify-center text-white", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Printer, { size: 20 })), /* @__PURE__ */ React.createElement("span", { className: "text-xs font-semibold text-stone-600" }, "Cetak Struk")), /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen({ name: "trx-detail", trx: completedTrx }), className: "flex flex-col items-center gap-1.5" }, /* @__PURE__ */ React.createElement("div", { className: "w-12 h-12 rounded-full flex items-center justify-center text-white", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(CreditCard, { size: 20 })), /* @__PURE__ */ React.createElement("span", { className: "text-xs font-semibold text-stone-600" }, "Bagikan"))), /* @__PURE__ */ React.createElement("button", { onClick: () => {
+      setCompletedTrx(null);
+      setBayarInput("");
+      setTab("pos");
+      setScreen(null);
+    }, className: "w-full max-w-xs rounded-2xl py-3.5 font-bold text-white", style: { background: BRAND.bg } }, "Buat Transaksi Baru"));
+  }
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-28 lg:max-w-2xl lg:mx-auto" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Checkout", onBack }),/* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-2" }, "Item (", cart.length, ")"), cart.some((c) => c.harga_grosir !== c.harga_eceran) && /* @__PURE__ */ React.createElement("p", { className: "text-[11px] text-stone-400 -mt-1.5 mb-2" }, "\u{1F4A1} Tekan label ", /* @__PURE__ */ React.createElement("b", null, "Eceran/Grosir"), " pada item untuk ganti harga"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden mb-4" }, cart.map((c, idx) => /* @__PURE__ */ React.createElement("div", { key: idx, className: "p-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-start justify-between gap-2" }, /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => {
+        const barangItem = data.barang.find((b) => b.id === c.barang_id);
+        if (barangItem) setScreen({ name: "item-form", item: barangItem });
+        else notify("Item ini sudah tidak ada di daftar Item/Layanan");
+      },
+      className: "text-sm font-semibold text-stone-700 flex-1 text-left underline decoration-dotted decoration-stone-300 underline-offset-2"
+    },
+    c.nama
+  ), /* @__PURE__ */ React.createElement("button", { onClick: () => removeItem(idx), className: "text-rose-400 shrink-0" }, /* @__PURE__ */ React.createElement(Trash2, { size: 15 }))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mt-2" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 bg-stone-100 rounded-full px-1" }, /* @__PURE__ */ React.createElement("button", { onClick: () => changeQty(idx, -1), className: "w-6 h-6 rounded-full bg-white shadow flex items-center justify-center" }, /* @__PURE__ */ React.createElement(Minus, { size: 12 })), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-bold w-5 text-center" }, c.qty), /* @__PURE__ */ React.createElement("button", { onClick: () => changeQty(idx, 1), className: "w-6 h-6 rounded-full bg-white shadow flex items-center justify-center" }, /* @__PURE__ */ React.createElement(Plus, { size: 12 }))), c.harga_grosir !== c.harga_eceran && /* @__PURE__ */ React.createElement("button", { onClick: () => toggleMode(idx), className: "flex items-center gap-1 text-[11px] font-bold px-2.5 py-1.5 rounded-full border-2 active:scale-95 transition", style: { background: c.mode === "grosir" ? "#e0f2fe" : "#fff", borderColor: c.mode === "grosir" ? BRAND.accent : "#d6d3d1", color: c.mode === "grosir" ? BRAND.accent : "#57534e" } }, /* @__PURE__ */ React.createElement(Tag, { size: 11 }), " ", c.mode === "grosir" ? "Grosir" : "Eceran", /* @__PURE__ */ React.createElement("span", { className: "text-[9px] opacity-60 ml-0.5" }, "\u21BB")), /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold", style: { color: BRAND.bg } }, rupiah((c.mode === "grosir" ? c.harga_grosir : c.harga_eceran) * c.qty))))), cart.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "py-8 text-center text-sm text-stone-400" }, "Keranjang kosong")), /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-2" }, "Detail"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-3.5 space-y-3 mb-4" }, /* @__PURE__ */ React.createElement(SelectRow, { label: "Pelanggan", value: ((_a = data.pelanggan.find((p) => p.id === cartMeta.pelanggan_id)) == null ? void 0 : _a.nama) || "Umum", onClick: () => {
+  }, options: data.pelanggan, onPick: (v) => setCartMeta((m) => ({ ...m, pelanggan_id: v })), display: "nama" }), /* @__PURE__ */ React.createElement(SelectRow, { label: "Mekanik", value: ((_b = data.mekanik.find((p) => p.id === cartMeta.mekanik_id)) == null ? void 0 : _b.nama) || "Tidak ada", options: data.mekanik, onPick: (v) => setCartMeta((m) => ({ ...m, mekanik_id: v })), display: "nama" }), /* @__PURE__ */ React.createElement(SelectRow, { label: "Metode Bayar", value: ((_c = data.metode_bayar.find((p) => p.id === cartMeta.metode_bayar_id)) == null ? void 0 : _c.nama) || ((_d = data.metode_bayar[0]) == null ? void 0 : _d.nama), options: data.metode_bayar, onPick: (v) => setCartMeta((m) => ({ ...m, metode_bayar_id: v })), display: "nama" }), /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "Diskon ", diskonPersen > 0 && !diskonTouched && /* @__PURE__ */ React.createElement("span", { className: "text-[10px]", style: { color: BRAND.accent } }, "(otomatis ", diskonPersen, "%)")), /* @__PURE__ */ React.createElement(CurrencyInput, { value: cartMeta.diskon, onChange: (v) => {
+    setDiskonTouched(true);
+    setCartMeta((m) => ({ ...m, diskon: v }));
+  }, className: "text-sm font-semibold text-right w-28 outline-none border-b border-stone-200 pb-0.5" }))), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-3.5 space-y-2 mb-4" }, /* @__PURE__ */ React.createElement("div", { className: "flex justify-between text-sm" }, /* @__PURE__ */ React.createElement("span", { className: "text-stone-500" }, "Subtotal"), /* @__PURE__ */ React.createElement("span", { className: "font-semibold" }, rupiah(subtotal))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between text-sm" }, /* @__PURE__ */ React.createElement("span", { className: "text-stone-500" }, "Diskon"), /* @__PURE__ */ React.createElement("span", { className: "font-semibold" }, "-", rupiah(diskon))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between text-base pt-2 border-t border-stone-100" }, /* @__PURE__ */ React.createElement("span", { className: "font-bold text-stone-700" }, "Total"), /* @__PURE__ */ React.createElement("span", { className: "font-bold", style: { color: BRAND.bg } }, rupiah(total))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between pt-2" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "Uang Bayar"), /* @__PURE__ */ React.createElement(CurrencyInput, { value: bayarInput, onChange: setBayarInput, placeholder: "Rp" + total.toLocaleString("id-ID"), className: "text-sm font-semibold text-right w-32 outline-none border-b border-stone-200 pb-0.5" })), bayarInput && /* @__PURE__ */ React.createElement("div", { className: "flex justify-between text-sm" }, /* @__PURE__ */ React.createElement("span", { className: "text-stone-500" }, "Kembalian"), /* @__PURE__ */ React.createElement("span", { className: "font-semibold" }, rupiah(Math.max(0, kembalian)))))), /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-0 left-0 right-0 bg-white border-t border-stone-100 p-4", style: { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" } }, /* @__PURE__ */ React.createElement("div", { className: "lg:max-w-2xl lg:mx-auto" }, /* @__PURE__ */ React.createElement("button", { onClick: openConfirm, disabled: cart.length === 0, className: "w-full rounded-2xl py-3.5 font-bold text-white disabled:opacity-40 active:scale-[0.98] transition", style: { background: BRAND.bg } }, "Selesaikan Transaksi \xB7 ", rupiah(total)))), confirmOpen && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white w-full max-w-sm rounded-2xl p-5" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-4" }, /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 text-lg" }, "Konfirmasi Pembelian!"), /* @__PURE__ */ React.createElement("button", { onClick: () => setConfirmOpen(false), className: "p-1 text-stone-400" }, /* @__PURE__ */ React.createElement(X, { size: 20 }))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "Nama Pelanggan"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold" }, ((_e = data.pelanggan.find((p) => p.id === cartMeta.pelanggan_id)) == null ? void 0 : _e.nama) || "Umum")), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-4" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "Total Harga"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-bold", style: { color: BRAND.bg } }, rupiah(total))), /* @__PURE__ */ React.createElement(Field, { label: "Jumlah Bayar" }, /* @__PURE__ */ React.createElement(CurrencyInput, { value: confirmBayar, onChange: setConfirmBayar })), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 mt-2" }, "Kalau ingin DP dulu, masukkan jumlah DP-nya di sini (boleh kurang dari total)."), /* @__PURE__ */ React.createElement("button", { onClick: finish, className: "w-full rounded-2xl py-3.5 font-bold text-white mt-4", style: { background: BRAND.bg } }, "Simpan"))));
+}
+function SelectRow({ label, value, options, onPick, display }) {
+  const [open, setOpen] = useState(false);
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { onClick: () => setOpen((o) => !o), className: "w-full flex items-center justify-between" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, label), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold text-stone-700 flex items-center gap-1" }, value, " ", /* @__PURE__ */ React.createElement(ChevronRight, { size: 14, className: `transition-transform ${open ? "rotate-90" : ""}` }))), open && /* @__PURE__ */ React.createElement("div", { className: "mt-2 max-h-40 overflow-y-auto bg-stone-50 rounded-xl divide-y divide-stone-100" }, /* @__PURE__ */ React.createElement("button", { onClick: () => {
+    onPick(null);
+    setOpen(false);
+  }, className: "w-full text-left px-3 py-2 text-sm text-stone-500" }, "Umum / Tidak ada"), options.map((o) => /* @__PURE__ */ React.createElement("button", { key: o.id, onClick: () => {
+    onPick(o.id);
+    setOpen(false);
+  }, className: "w-full text-left px-3 py-2 text-sm text-stone-700" }, o[display]))));
+}
+function ItemListScreen({ ctx, onBack }) {
+  const { data, setScreen, setItemUnlocked, notify } = ctx;
+  const [q, setQ] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
+  const [jenisTab, setJenisTab] = useState("barang");
+  const list = data.barang.filter((b) => {
+    if (b.jenis !== jenisTab) return false;
+    if (!q) return true;
+    return b.nama.toLowerCase().includes(q.toLowerCase()) || (b.barcode || "").toLowerCase().includes(q.toLowerCase());
+  });
+  const exitMenu = () => {
+    if (data.security.lock_item_menu) setItemUnlocked(false);
+    onBack();
+  };
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "sticky top-0 z-20 text-white", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-4 py-3.5" }, /* @__PURE__ */ React.createElement("button", { onClick: exitMenu, className: "p-1 -ml-1 rounded-full active:bg-white/10" }, /* @__PURE__ */ React.createElement(ChevronLeft, { size: 22 })), /* @__PURE__ */ React.createElement("h1", { className: "text-[17px] font-bold flex-1 truncate" }, "Kelola Item"), /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen({ name: "item-form", item: null, defaultJenis: jenisTab }), className: "p-1.5 bg-white/15 rounded-full" }, /* @__PURE__ */ React.createElement(Plus, { size: 18 }))), /* @__PURE__ */ React.createElement("div", { className: "flex px-4 gap-0" }, [{ key: "jasa", label: "Layanan" }, { key: "barang", label: "Item" }].map((t) => /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      key: t.key,
+      onClick: () => setJenisTab(t.key),
+      className: `flex-1 py-3 text-sm font-bold rounded-t-2xl transition-colors ${jenisTab === t.key ? "bg-[var(--cream)]" : "text-white/70"}`,
+      style: jenisTab === t.key ? { background: BRAND.cream, color: BRAND.bg } : {}
+    },
+    t.label
+  )))), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-3 pb-2 sticky top-[92px] z-10", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-xl flex items-center px-3 py-2.5 gap-2 border border-stone-200 flex-1" }, /* @__PURE__ */ React.createElement(Search, { size: 16, className: "text-stone-400" }), /* @__PURE__ */ React.createElement("input", { value: q, onChange: (e) => setQ(e.target.value), placeholder: "Cari nama atau barcode...", className: "outline-none text-sm flex-1" })), /* @__PURE__ */ React.createElement("button", { onClick: () => setScanOpen(true), className: "p-2.5 rounded-xl text-white shrink-0", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Camera, { size: 18 })))), scanOpen && /* @__PURE__ */ React.createElement(
+    ScannerModal,
+    {
+      title: "Scan Barcode Item",
+      onDetected: (code) => {
+        setQ(code);
+        setScanOpen(false);
+      },
+      onClose: () => setScanOpen(false)
+    }
+  ), /* @__PURE__ */ React.createElement("div", { className: "px-4 pb-4" }, /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-3" }, list.slice(0, 100).map((item) => {
+    var _a;
+    const lowStock = item.jenis === "barang" && item.stok !== null && item.stok !== void 0 && item.stok <= 2;
+    return /* @__PURE__ */ React.createElement("button", { key: item.id, onClick: () => setScreen({ name: "item-form", item }), className: "w-full flex items-center gap-4 px-4 py-4 text-left bg-white rounded-2xl border border-stone-100" }, /* @__PURE__ */ React.createElement("div", { className: "w-28 h-28 rounded-2xl shrink-0 overflow-hidden bg-stone-100 flex items-center justify-center" }, item.gambar ? /* @__PURE__ */ React.createElement("img", { src: item.gambar, alt: "", className: "w-full h-full object-cover" }) : /* @__PURE__ */ React.createElement(Camera, { size: 32, className: "text-stone-300" })), /* @__PURE__ */ React.createElement("div", { className: "min-w-0 flex-1" }, /* @__PURE__ */ React.createElement("p", { className: "text-base font-semibold text-stone-700 leading-snug" }, item.nama), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-1.5 flex-wrap" }, item.jenis === "barang" && /* @__PURE__ */ React.createElement(
+      "span",
+      {
+        className: `text-xs font-semibold px-2 py-1 rounded-md ${lowStock ? "bg-rose-100 text-rose-600" : "text-stone-400"}`
+      },
+      lowStock && "\u26A0 ",
+      "Stok ",
+      (_a = item.stok) != null ? _a : 0
+    ), item.barcode && /* @__PURE__ */ React.createElement("span", { className: "text-xs text-stone-400" }, "#", item.barcode)), /* @__PURE__ */ React.createElement("p", { className: "text-base font-bold mt-2", style: { color: BRAND.bg } }, rupiah(item.harga_eceran)), item.harga_grosir !== item.harga_eceran && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400" }, "Grosir ", rupiah(item.harga_grosir))));
+  }), list.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "lg:col-span-3" }, /* @__PURE__ */ React.createElement(EmptyState, { icon: Package, title: jenisTab === "jasa" ? "Belum ada layanan" : "Belum ada item" }))), list.length > 100 && /* @__PURE__ */ React.createElement("p", { className: "text-center text-xs text-stone-400 mt-3" }, "Menampilkan 100 dari ", list.length, ". Gunakan pencarian.")));
+}
+function ItemFormScreen({ ctx, onBack, item, defaultJenis }) {
+  const { update, notify, setItemUnlocked, data } = ctx;
+  const [form, setForm] = useState(item || { nama: "", jenis: defaultJenis || "barang", harga_eceran: "", harga_grosir: "", harga_beli: "", satuan: "pcs", stok: "", barcode: "", gambar: "", aktif: true });
+  const [scanOpen, setScanOpen] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+  const photoInputRef = React.useRef(null);
+  const galleryInputRef = React.useRef(null);
+  const uploadPromiseRef = React.useRef(null);
+  const gambarRef = React.useRef(form.gambar || "");
+  const stableIdRef = React.useRef((item == null ? void 0 : item.id) || uid());
+  const exitMenu = () => {
+    if (data.security.lock_item_menu) setItemUnlocked(false);
+    onBack();
+  };
+  const handlePhoto = (file) => {
+    setPhotoError("");
+    if (!file) {
+      notify("Tidak ada file yang dipilih");
+      return;
+    }
+    setUploading(true);
+    try {
+      const localPreview = URL.createObjectURL(file);
+      gambarRef.current = localPreview;
+      setForm((f) => ({ ...f, gambar: localPreview }));
+    } catch (e) {
+      const msg = "Gagal menampilkan preview foto: " + (e.message || "coba lagi");
+      notify(msg);
+      setPhotoError(msg);
+      setUploading(false);
+      return;
+    }
+    const task = (async () => {
+      try {
+        const { data: userData, error: userErr } = await withTimeout(sb.auth.getUser(), 1e4, "Cek sesi login terlalu lama, coba lagi");
+        if (userErr || !(userData == null ? void 0 : userData.user)) throw new Error((userErr == null ? void 0 : userErr.message) || "Sesi login bermasalah");
+        const userId = userData.user.id;
+        const ext = (file.name && file.name.includes(".") ? file.name.split(".").pop() : "jpg").toLowerCase();
+        const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await withTimeout(
+          sb.storage.from("item-photos").upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" }),
+          2e4,
+          "Upload foto terlalu lama (sinyal internet lemah), coba lagi"
+        );
+        if (error) throw error;
+        const { data: pub } = sb.storage.from("item-photos").getPublicUrl(path);
+        gambarRef.current = pub.publicUrl;
+        setForm((f) => ({ ...f, gambar: pub.publicUrl }));
+        const myId = stableIdRef.current;
+        const exists = data.barang.find((b) => b.id === myId);
+        const baseItem = exists || {
+          nama: form.nama || "(Belum diberi nama)",
+          jenis: form.jenis || "barang",
+          harga_eceran: Number(form.harga_eceran) || 0,
+          harga_grosir: Number(form.harga_grosir) || Number(form.harga_eceran) || 0,
+          harga_beli: Number(form.harga_beli) || 0,
+          satuan: form.satuan || "pcs",
+          stok: form.jenis === "barang" ? Number(form.stok) || 0 : null,
+          barcode: form.barcode || "",
+          aktif: true
+        };
+        const updatedItem = { ...baseItem, id: myId, gambar: pub.publicUrl };
+        const nextBarang = exists ? data.barang.map((b) => b.id === myId ? updatedItem : b) : [updatedItem, ...data.barang];
+        let ok = false;
+        try {
+          ok = await withTimeout(saveKey(userId, "barang", nextBarang), 15e3, "Simpan ke server terlalu lama, coba lagi");
+        } catch (saveErr) {
+          ok = false;
+          setPhotoError(saveErr.message);
+        }
+        if (ok) {
+          update("barang", () => nextBarang);
+          notify("Foto tersimpan ke server");
+        } else {
+          notify("Foto diupload tapi gagal disimpan ke data item. Tekan Simpan untuk coba lagi.");
+        }
+      } catch (e) {
+        const msg = "Gagal upload foto ke server: " + (e.message || JSON.stringify(e) || "coba lagi");
+        notify(msg);
+        setPhotoError(msg);
+        gambarRef.current = "";
+        setForm((f) => ({ ...f, gambar: "" }));
+      } finally {
+        setUploading(false);
+      }
+    })();
+    uploadPromiseRef.current = task;
+  };
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
+    if (!form.nama.trim()) return notify("Nama item wajib diisi");
+    if (uploadPromiseRef.current) {
+      setSaving(true);
+      notify("Menunggu upload foto selesai...");
+      await uploadPromiseRef.current;
+      uploadPromiseRef.current = null;
+    }
+    const payload = {
+      ...form,
+      gambar: gambarRef.current,
+      id: stableIdRef.current,
+      harga_eceran: Number(form.harga_eceran) || 0,
+      harga_grosir: Number(form.harga_grosir) || Number(form.harga_eceran) || 0,
+      harga_beli: Number(form.harga_beli) || 0,
+      stok: form.jenis === "barang" ? Number(form.stok) || 0 : null
+    };
+    const nextBarang = (() => {
+      const exists = data.barang.find((b) => b.id === payload.id);
+      if (exists) return data.barang.map((b) => b.id === payload.id ? payload : b);
+      return [payload, ...data.barang];
+    })();
+    setSaving(true);
+    const { data: userData, error: userErr } = await sb.auth.getUser();
+    if (userErr || !(userData == null ? void 0 : userData.user)) {
+      setSaving(false);
+      notify("Sesi login bermasalah, coba refresh dan login ulang. Item BELUM tersimpan.");
+      return;
+    }
+    const ok = await saveKey(userData.user.id, "barang", nextBarang);
+    setSaving(false);
+    if (!ok) {
+      notify("Gagal menyimpan ke server (cek koneksi internet). Item BELUM tersimpan, coba lagi.");
+      return;
+    }
+    update("barang", () => nextBarang);
+    notify(item ? "Item diperbarui" : "Item ditambahkan");
+    exitMenu();
+  };
+  const del = () => {
+    update("barang", (prev) => prev.filter((b) => b.id !== item.id));
+    notify("Item dihapus");
+    exitMenu();
+  };
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-24" }, /* @__PURE__ */ React.createElement(TopBar, { title: item ? "Edit Item" : "Item Baru", onBack: exitMenu }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-4" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { className: "text-[11px] font-semibold text-stone-400 uppercase block mb-1.5" }, "Foto Item"), /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      ref: galleryInputRef,
+      type: "file",
+      accept: "image/*",
+      className: "hidden",
+      onChange: (e) => {
+        const file = e.target.files[0];
+        e.target.value = "";
+        if (file) handlePhoto(file);
+      }
+    }
+  ), form.gambar ? /* @__PURE__ */ React.createElement("div", { className: "flex items-start gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "relative w-28 h-28 shrink-0" }, /* @__PURE__ */ React.createElement("img", { src: form.gambar, alt: "", className: "w-28 h-28 rounded-2xl object-cover border border-stone-200" }), uploading && /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-6 h-6 border-2 border-white/40 rounded-full animate-spin", style: { borderTopColor: "white" } })), /* @__PURE__ */ React.createElement("button", { onClick: () => setForm((f) => ({ ...f, gambar: "" })), className: "absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white shadow flex items-center justify-center border border-stone-200" }, /* @__PURE__ */ React.createElement(X, { size: 13, className: "text-rose-500" }))), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setCameraOpen(true), className: "flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl text-white", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Camera, { size: 14 }), " Kamera"), /* @__PURE__ */ React.createElement("button", { onClick: () => galleryInputRef.current.click(), className: "flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border border-stone-300 text-stone-600" }, /* @__PURE__ */ React.createElement(Package, { size: 14 }), " Galeri"))) : /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setCameraOpen(true), disabled: uploading, className: "flex-1 h-24 rounded-2xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center gap-1 text-stone-400" }, uploading ? /* @__PURE__ */ React.createElement("div", { className: "w-6 h-6 border-2 border-stone-300 rounded-full animate-spin", style: { borderTopColor: BRAND.bg } }) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Camera, { size: 20 }), /* @__PURE__ */ React.createElement("span", { className: "text-[10px] font-semibold" }, "Kamera"))), /* @__PURE__ */ React.createElement("button", { onClick: () => galleryInputRef.current.click(), disabled: uploading, className: "flex-1 h-24 rounded-2xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center gap-1 text-stone-400" }, /* @__PURE__ */ React.createElement(Package, { size: 20 }), /* @__PURE__ */ React.createElement("span", { className: "text-[10px] font-semibold" }, "Galeri"))), photoError && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-rose-500 mt-2 max-w-xs" }, photoError), cameraOpen && /* @__PURE__ */ React.createElement(
+    PhotoCaptureModal,
+    {
+      onCaptured: (blob) => {
+        setCameraOpen(false);
+        handlePhoto(blob);
+      },
+      onClose: () => setCameraOpen(false)
+    }
+  )), /* @__PURE__ */ React.createElement(Field, { label: "Nama Item" }, /* @__PURE__ */ React.createElement("input", { value: form.nama, onChange: (e) => setForm((f) => ({ ...f, nama: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "Contoh: LCD Samsung A50" })), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, ["barang", "jasa"].map((j) => /* @__PURE__ */ React.createElement("button", { key: j, onClick: () => setForm((f) => ({ ...f, jenis: j })), className: `flex-1 py-2.5 rounded-xl text-sm font-semibold capitalize border ${form.jenis === j ? "text-white border-transparent" : "border-stone-200 text-stone-500"}`, style: form.jenis === j ? { background: BRAND.bg } : {} }, j))), /* @__PURE__ */ React.createElement(Field, { label: "Barcode / Kode" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("input", { value: form.barcode || "", onChange: (e) => setForm((f) => ({ ...f, barcode: e.target.value })), className: "flex-1 outline-none text-sm font-medium", placeholder: "Kosongkan jika tidak ada" }), /* @__PURE__ */ React.createElement("button", { onClick: () => setScanOpen(true), className: "p-1.5 rounded-lg text-white shrink-0", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Search, { size: 16 })))), scanOpen && /* @__PURE__ */ React.createElement(
+    ScannerModal,
+    {
+      title: "Scan Barcode Item",
+      onDetected: (code) => {
+        setForm((f) => ({ ...f, barcode: code }));
+        setScanOpen(false);
+        notify("Barcode terdeteksi");
+      },
+      onClose: () => setScanOpen(false)
+    }
+  ), form.jenis === "barang" && /* @__PURE__ */ React.createElement(Field, { label: "Stok" }, /* @__PURE__ */ React.createElement("input", { type: "number", value: form.stok, onChange: (e) => setForm((f) => ({ ...f, stok: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "0" })), /* @__PURE__ */ React.createElement(Field, { label: "Satuan Item" }, /* @__PURE__ */ React.createElement("input", { value: form.satuan, onChange: (e) => setForm((f) => ({ ...f, satuan: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "pcs" })), /* @__PURE__ */ React.createElement(Field, { label: "Harga Beli" }, /* @__PURE__ */ React.createElement(CurrencyInput, { value: form.harga_beli, onChange: (v) => setForm((f) => ({ ...f, harga_beli: v })) })), /* @__PURE__ */ React.createElement(Field, { label: "Harga Jual (Eceran)" }, /* @__PURE__ */ React.createElement(CurrencyInput, { value: form.harga_eceran, onChange: (v) => setForm((f) => ({ ...f, harga_eceran: v })) })), /* @__PURE__ */ React.createElement(Field, { label: "Harga Grosir" }, /* @__PURE__ */ React.createElement(CurrencyInput, { value: form.harga_grosir, onChange: (v) => setForm((f) => ({ ...f, harga_grosir: v })), placeholder: "Kosongkan jika sama dengan harga jual" }))), /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-0 left-0 right-0 bg-white border-t border-stone-100 p-4 flex gap-2", style: { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" } }, item && /* @__PURE__ */ React.createElement("button", { onClick: del, className: "px-4 rounded-2xl border border-rose-200 text-rose-500 font-semibold text-sm" }, "Hapus"), /* @__PURE__ */ React.createElement("button", { onClick: save, disabled: uploading || saving, className: "flex-1 rounded-2xl py-3.5 font-bold text-white active:scale-[0.98] transition disabled:opacity-60", style: { background: BRAND.bg } }, uploading || saving ? "Menunggu foto..." : "Simpan")));
+}
+function Field({ label, children }) {
+  return /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-xl border border-stone-200 px-3.5 py-2.5" }, /* @__PURE__ */ React.createElement("label", { className: "text-[11px] font-semibold text-stone-400 uppercase" }, label), /* @__PURE__ */ React.createElement("div", { className: "mt-0.5" }, children));
+}
+function CurrencyInput({ value, onChange, placeholder, className }) {
+  const digits = String(value != null ? value : "").replace(/\D/g, "");
+  const display = digits ? "Rp" + Number(digits).toLocaleString("id-ID") : "";
+  return /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      type: "text",
+      inputMode: "numeric",
+      value: display,
+      onChange: (e) => onChange(e.target.value.replace(/\D/g, "")),
+      className: className || "w-full outline-none text-sm font-medium",
+      placeholder: placeholder || "Rp0"
+    }
+  );
+}
+function RiwayatScreen({ ctx }) {
+  const { data, update, notify, setScreen } = ctx;
+  const [q, setQ] = useState("");
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState([]);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const list = [...data.transaksi].reverse().filter((t) => !q || (t.pelanggan_nama || "").toLowerCase().includes(q.toLowerCase()) || (t.kode || "").toLowerCase().includes(q.toLowerCase()));
+  const allSelected = list.length > 0 && selected.length === list.length;
+  const toggleOne = (id) => {
+    setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  };
+  const toggleAll = () => {
+    setSelected(allSelected ? [] : list.map((t) => t.id));
+  };
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelected([]);
+  };
+  const doDeleteSelected = () => {
+    update("transaksi", (prev) => prev.filter((t) => !selected.includes(t.id)));
+    notify(`${selected.length} transaksi dihapus`);
+    setConfirmDelete(false);
+    exitSelectMode();
+  };
+  const requestDeleteSelected = () => {
+    if (selected.length === 0) return;
+    if (data.security.lock_delete_transaksi && data.security.pin) {
+      ctx.pinActionRef.current = doDeleteSelected;
+      setScreen({ name: "pin-gate" });
+    } else {
+      setConfirmDelete(true);
+    }
+  };
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement("div", { className: "sticky top-0 z-20 text-white px-4 pt-4 pb-3", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-3" }, /* @__PURE__ */ React.createElement("h1", { className: "text-[17px] font-bold" }, "Riwayat Transaksi"), selectMode ? /* @__PURE__ */ React.createElement("button", { onClick: exitSelectMode, className: "text-xs font-semibold bg-white/15 px-3 py-1.5 rounded-full" }, "Batal") : /* @__PURE__ */ React.createElement("button", { onClick: () => setSelectMode(true), className: "text-xs font-semibold bg-white/15 px-3 py-1.5 rounded-full" }, "Pilih")), /* @__PURE__ */ React.createElement("div", { className: "bg-white/15 rounded-xl flex items-center px-3 py-2.5 gap-2" }, /* @__PURE__ */ React.createElement(Search, { size: 17, className: "text-white/70" }), /* @__PURE__ */ React.createElement("input", { value: q, onChange: (e) => setQ(e.target.value), placeholder: "Cari nama / kode transaksi...", className: "bg-transparent outline-none text-sm text-white placeholder-white/50 flex-1" })), selectMode && /* @__PURE__ */ React.createElement("button", { onClick: toggleAll, className: "flex items-center gap-2 mt-3 text-sm font-semibold text-white" }, /* @__PURE__ */ React.createElement("span", { className: `w-5 h-5 rounded-md border-2 flex items-center justify-center ${allSelected ? "bg-white" : "border-white/60"}` }, allSelected && /* @__PURE__ */ React.createElement(Check, { size: 13, style: { color: BRAND.bg } })), "Pilih Semua (", list.length, ")")), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-3 pb-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden" }, list.map((t) => {
+    var _a;
+    const isSelected = selected.includes(t.id);
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: t.id,
+        onClick: () => selectMode ? toggleOne(t.id) : setScreen({ name: "trx-detail", trx: t }),
+        className: "w-full flex items-center gap-3 px-4 py-3.5 text-left"
+      },
+      selectMode && /* @__PURE__ */ React.createElement("span", { className: `w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center ${isSelected ? "border-transparent" : "border-stone-300"}`, style: isSelected ? { background: BRAND.bg } : {} }, isSelected && /* @__PURE__ */ React.createElement(Check, { size: 13, className: "text-white" })),
+      /* @__PURE__ */ React.createElement("div", { className: "min-w-0 flex-1" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700 truncate" }, t.pelanggan_nama || "Umum"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 mt-0.5" }, fmtDate(t.tanggal), " \xB7 ", ((_a = t.items) == null ? void 0 : _a.length) || 0, " item")),
+      /* @__PURE__ */ React.createElement("div", { className: "text-right shrink-0 ml-2" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700" }, rupiah(t.bayar || t.total)), /* @__PURE__ */ React.createElement(Badge, { tone: "green" }, "Lunas"))
+    );
+  }), list.length === 0 && /* @__PURE__ */ React.createElement(EmptyState, { icon: History, title: "Belum ada transaksi" }))), selectMode && selected.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-16 left-0 right-0 z-30 px-4 pb-2" }, /* @__PURE__ */ React.createElement("button", { onClick: requestDeleteSelected, className: "w-full rounded-2xl shadow-xl px-4 py-3.5 flex items-center justify-center gap-2 text-white font-bold bg-rose-500 active:scale-[0.98] transition" }, /* @__PURE__ */ React.createElement(Trash2, { size: 18 }), " Hapus ", selected.length, " Transaksi")), confirmDelete && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 z-50 bg-black/50 flex items-end" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white w-full rounded-t-3xl p-5" }, /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 text-center mb-1" }, "Hapus ", selected.length, " Transaksi?"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-500 text-center mb-5" }, "Transaksi yang dipilih akan dihapus permanen dan tidak bisa dikembalikan."), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setConfirmDelete(false), className: "flex-1 rounded-2xl py-3 font-bold border border-stone-200 text-stone-600" }, "Batal"), /* @__PURE__ */ React.createElement("button", { onClick: doDeleteSelected, className: "flex-1 rounded-2xl py-3 font-bold text-white bg-rose-500" }, "Ya, Hapus")))));
+}
+function TrxDetailScreen({ ctx, onBack, trx }) {
+  var _a;
+  const { data, update, notify, setScreen } = ctx;
+  const metodeBayar = ((_a = data.metode_bayar.find((m) => m.id === trx.metode_bayar_id)) == null ? void 0 : _a.nama) || "-";
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const doDelete = () => {
+    update("transaksi", (prev) => prev.filter((t) => t.id !== trx.id));
+    notify("Transaksi dihapus");
+    onBack();
+  };
+  const requestDelete = () => {
+    if (data.security.lock_delete_transaksi && data.security.pin) {
+      ctx.pinActionRef.current = doDelete;
+      setScreen({ name: "pin-gate" });
+    } else {
+      setConfirmDelete(true);
+    }
+  };
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-24 print:hidden-parent" }, /* @__PURE__ */ React.createElement("div", { className: "print:hidden" }, /* @__PURE__ */ React.createElement(TopBar, { title: `#${trx.kode}`, onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4" }, /* @__PURE__ */ React.createElement("div", { className: "flex justify-between text-sm mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-stone-500" }, "Tanggal"), /* @__PURE__ */ React.createElement("span", { className: "font-semibold" }, fmtDate(trx.tanggal))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between text-sm mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-stone-500" }, "Pelanggan"), /* @__PURE__ */ React.createElement("span", { className: "font-semibold" }, trx.pelanggan_nama || "Umum")), trx.mekanik_nama && /* @__PURE__ */ React.createElement("div", { className: "flex justify-between text-sm mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-stone-500" }, "Mekanik"), /* @__PURE__ */ React.createElement("span", { className: "font-semibold" }, trx.mekanik_nama)), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between text-sm" }, /* @__PURE__ */ React.createElement("span", { className: "text-stone-500" }, "Metode Bayar"), /* @__PURE__ */ React.createElement("span", { className: "font-semibold" }, metodeBayar))), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden" }, (trx.items || []).map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "px-4 py-3 flex justify-between text-sm" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { className: "font-semibold text-stone-700" }, it.nama), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400" }, it.qty, " x ", rupiah(it.harga), " ", it.mode === "grosir" ? "(Grosir)" : "")), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700" }, rupiah(it.subtotal))))), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4 space-y-1.5" }, /* @__PURE__ */ React.createElement("div", { className: "flex justify-between text-sm" }, /* @__PURE__ */ React.createElement("span", { className: "text-stone-500" }, "Diskon"), /* @__PURE__ */ React.createElement("span", { className: "font-semibold" }, "-", rupiah(trx.diskon))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between text-base pt-1.5 border-t border-stone-100" }, /* @__PURE__ */ React.createElement("span", { className: "font-bold" }, "Total"), /* @__PURE__ */ React.createElement("span", { className: "font-bold", style: { color: BRAND.bg } }, rupiah(trx.total))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between text-sm pt-1.5 border-t border-stone-100" }, /* @__PURE__ */ React.createElement("span", { className: "text-stone-500" }, "Uang Bayar"), /* @__PURE__ */ React.createElement("span", { className: "font-semibold" }, rupiah(trx.bayar))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between text-sm" }, /* @__PURE__ */ React.createElement("span", { className: "text-stone-500" }, "Kembalian"), /* @__PURE__ */ React.createElement("span", { className: "font-semibold" }, rupiah(Math.max(0, (trx.bayar || 0) - trx.total))))))), /* @__PURE__ */ React.createElement("div", { className: "hidden print:block font-mono text-black", style: { width: "300px", margin: "0 auto", fontSize: "12px" } }, /* @__PURE__ */ React.createElement("div", { className: "text-center mb-2" }, /* @__PURE__ */ React.createElement("p", { className: "font-bold text-sm" }, data.toko.nama), data.toko.alamat && /* @__PURE__ */ React.createElement("p", null, data.toko.alamat)), /* @__PURE__ */ React.createElement("p", null, "--------------------------------"), /* @__PURE__ */ React.createElement("p", null, "No: ", trx.kode), /* @__PURE__ */ React.createElement("p", null, "Tgl: ", fmtDate(trx.tanggal)), /* @__PURE__ */ React.createElement("p", null, "Pelanggan: ", trx.pelanggan_nama || "Umum"), trx.mekanik_nama && /* @__PURE__ */ React.createElement("p", null, "Mekanik: ", trx.mekanik_nama), /* @__PURE__ */ React.createElement("p", null, "--------------------------------"), (trx.items || []).map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "mb-1" }, /* @__PURE__ */ React.createElement("p", null, it.nama), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between" }, /* @__PURE__ */ React.createElement("span", null, it.qty, " x ", rupiah(it.harga)), /* @__PURE__ */ React.createElement("span", null, rupiah(it.subtotal))))), /* @__PURE__ */ React.createElement("p", null, "--------------------------------"), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between" }, /* @__PURE__ */ React.createElement("span", null, "Diskon"), /* @__PURE__ */ React.createElement("span", null, "-", rupiah(trx.diskon))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between font-bold" }, /* @__PURE__ */ React.createElement("span", null, "TOTAL"), /* @__PURE__ */ React.createElement("span", null, rupiah(trx.total))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between" }, /* @__PURE__ */ React.createElement("span", null, "Bayar"), /* @__PURE__ */ React.createElement("span", null, rupiah(trx.bayar))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between" }, /* @__PURE__ */ React.createElement("span", null, "Kembali"), /* @__PURE__ */ React.createElement("span", null, rupiah(Math.max(0, (trx.bayar || 0) - trx.total)))), /* @__PURE__ */ React.createElement("p", null, "Metode: ", metodeBayar), /* @__PURE__ */ React.createElement("p", null, "--------------------------------"), /* @__PURE__ */ React.createElement("p", { className: "text-center mt-2" }, data.toko.pesan_bawah || "Terima Kasih")), /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-0 left-0 right-0 bg-white border-t border-stone-100 p-4 flex gap-2 print:hidden", style: { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" } }, /* @__PURE__ */ React.createElement("button", { onClick: requestDelete, className: "px-4 rounded-2xl border border-rose-200 text-rose-500 flex items-center justify-center" }, /* @__PURE__ */ React.createElement(Trash2, { size: 18 })), /* @__PURE__ */ React.createElement("button", { onClick: () => window.print(), className: "flex-1 rounded-2xl py-3.5 font-bold text-white flex items-center justify-center gap-2", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Printer, { size: 18 }), " Cetak / Bagikan Struk")), confirmDelete && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 z-50 bg-black/50 flex items-end print:hidden" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white w-full rounded-t-3xl p-5" }, /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 text-center mb-1" }, "Hapus Transaksi Ini?"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-500 text-center mb-5" }, "Transaksi #", trx.kode, " akan dihapus permanen dan tidak bisa dikembalikan."), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setConfirmDelete(false), className: "flex-1 rounded-2xl py-3 font-bold border border-stone-200 text-stone-600" }, "Batal"), /* @__PURE__ */ React.createElement("button", { onClick: doDelete, className: "flex-1 rounded-2xl py-3 font-bold text-white bg-rose-500" }, "Ya, Hapus")))));
+}
+function LaporanScreen({ ctx }) {
+  const { data } = ctx;
+  const [range, setRange] = useState("7");
+  const stats = useMemo(() => {
+    const now = /* @__PURE__ */ new Date();
+    const days = Number(range);
+    const cutoff = new Date(now);
+    cutoff.setDate(cutoff.getDate() - days);
+    const filtered = data.transaksi.filter((t) => new Date((t.tanggal || "").replace(" ", "T")) >= cutoff);
+    const totalPenjualan = filtered.reduce((s, t) => s + Number(t.bayar || t.total || 0), 0);
+    const totalProfit = filtered.reduce((s, t) => s + Number(t.profit || 0), 0);
+    const jumlah = filtered.length;
+    const perHari = {};
+    filtered.forEach((t) => {
+      const d = (t.tanggal || "").slice(0, 10);
+      perHari[d] = (perHari[d] || 0) + Number(t.bayar || t.total || 0);
+    });
+    const itemCount = {};
+    filtered.forEach((t) => (t.items || []).forEach((it) => {
+      itemCount[it.nama] = (itemCount[it.nama] || 0) + it.qty;
+    }));
+    const terlaris = Object.entries(itemCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    return { totalPenjualan, totalProfit, jumlah, perHari, terlaris };
+  }, [data.transaksi, range]);
+  const maxHari = Math.max(1, ...Object.values(stats.perHari));
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(TopBar, { title: "Laporan" }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4" }, /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-4" }, [{ v: "1", l: "Hari ini" }, { v: "7", l: "7 Hari" }, { v: "30", l: "30 Hari" }].map((r) => /* @__PURE__ */ React.createElement("button", { key: r.v, onClick: () => setRange(r.v), className: `px-3.5 py-1.5 rounded-full text-xs font-semibold ${range === r.v ? "text-white" : "bg-white border border-stone-200 text-stone-500"}`, style: range === r.v ? { background: BRAND.bg } : {} }, r.l))), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-2.5 mb-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-3.5" }, /* @__PURE__ */ React.createElement("p", { className: "text-[11px] text-stone-400 mb-1" }, "Total Penjualan"), /* @__PURE__ */ React.createElement("p", { className: "text-base font-bold", style: { color: BRAND.bg } }, rupiah(stats.totalPenjualan))), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-3.5" }, /* @__PURE__ */ React.createElement("p", { className: "text-[11px] text-stone-400 mb-1" }, "Total Profit"), /* @__PURE__ */ React.createElement("p", { className: "text-base font-bold text-emerald-600" }, rupiah(stats.totalProfit))), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-3.5 col-span-2" }, /* @__PURE__ */ React.createElement("p", { className: "text-[11px] text-stone-400 mb-1" }, "Jumlah Transaksi"), /* @__PURE__ */ React.createElement("p", { className: "text-base font-bold text-stone-700" }, stats.jumlah, " transaksi"))), /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-2" }, "Penjualan Harian"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4 mb-4" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-end gap-1.5 h-28" }, Object.entries(stats.perHari).sort().map(([d, v]) => /* @__PURE__ */ React.createElement("div", { key: d, className: "flex-1 flex flex-col items-center justify-end gap-1" }, /* @__PURE__ */ React.createElement("div", { className: "w-full rounded-t-md", style: { height: `${Math.max(4, v / maxHari * 100)}%`, background: BRAND.accent } }), /* @__PURE__ */ React.createElement("span", { className: "text-[9px] text-stone-400" }, d.slice(8, 10)))), Object.keys(stats.perHari).length === 0 && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 w-full text-center" }, "Belum ada data"))), /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-2" }, "Item Terlaris"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden mb-6" }, stats.terlaris.map(([nama, qty], i) => /* @__PURE__ */ React.createElement("div", { key: nama, className: "px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold text-stone-700" }, i + 1, ". ", nama), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-bold", style: { color: BRAND.bg } }, qty, "x"))), stats.terlaris.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "py-8 text-center text-sm text-stone-400" }, "Belum ada data"))));
+}
+function LainnyaScreen({ ctx }) {
+  const { data, setScreen, openItemMenu } = ctx;
+  const items = [
+    { label: "Profil Toko", icon: Store, action: () => setScreen({ name: "toko-edit" }) },
+    { label: "Pelanggan", icon: Users, action: () => setScreen({ name: "pelanggan" }) },
+    { label: "Mekanik / Staff", icon: Wrench, action: () => setScreen({ name: "mekanik" }) },
+    { label: "Metode Pembayaran", icon: CreditCard, action: () => setScreen({ name: "metode" }) },
+    { label: "Item / Layanan", icon: Package, action: openItemMenu },
+    { label: "Keamanan", icon: Settings, action: () => setScreen({ name: "security" }) },
+    { label: "Import / Export Backup", icon: Receipt, action: () => setScreen({ name: "import-data" }) },
+    { label: "Printer", icon: Printer, action: () => setScreen({ name: "printer-settings" }) },
+    { label: "Servis HP", icon: Wrench, action: () => setScreen({ name: "servis-hp" }) }
+  ];
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(TopBar, { title: "Lainnya" }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden" }, items.map((it, i) => {
+    const Icon2 = it.icon;
+    return /* @__PURE__ */ React.createElement("button", { key: i, onClick: it.action, className: "w-full flex items-center gap-3 px-4 py-3.5" }, /* @__PURE__ */ React.createElement("div", { className: "w-9 h-9 rounded-xl flex items-center justify-center", style: { background: "#dbeafe" } }, /* @__PURE__ */ React.createElement(Icon2, { size: 16, style: { color: BRAND.bg } })), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold text-stone-700 flex-1 text-left" }, it.label), /* @__PURE__ */ React.createElement(ChevronRight, { size: 16, className: "text-stone-300" }));
+  })), /* @__PURE__ */ React.createElement("p", { className: "text-center text-[11px] text-stone-300 mt-6" }, "Data tersimpan otomatis di perangkat ini")));
+}
+function SimpleListScreen({ title, ctx, onBack, storageKey, fields, emptyIcon }) {
+  const { data, update, notify } = ctx;
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({});
+  const openNew = () => {
+    setForm(Object.fromEntries(fields.map((f) => [f.key, ""])));
+    setEditing("new");
+  };
+  const openEdit = (row) => {
+    setForm(row);
+    setEditing(row.id);
+  };
+  const save = () => {
+    if (!form[fields[0].key]) return notify("Nama wajib diisi");
+    const payload = { ...form, id: form.id || uid() };
+    update(storageKey, (prev) => {
+      const exists = prev.find((r) => r.id === payload.id);
+      if (exists) return prev.map((r) => r.id === payload.id ? payload : r);
+      return [...prev, payload];
+    });
+    setEditing(null);
+    notify("Tersimpan");
+  };
+  const del = (id) => {
+    update(storageKey, (prev) => prev.filter((r) => r.id !== id));
+    setEditing(null);
+    notify("Dihapus");
+  };
+  if (editing) {
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-24" }, /* @__PURE__ */ React.createElement(TopBar, { title: editing === "new" ? "Tambah" : "Edit", onBack: () => setEditing(null) }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-3" }, fields.map((f) => /* @__PURE__ */ React.createElement(Field, { key: f.key, label: f.label }, /* @__PURE__ */ React.createElement("input", { value: form[f.key] || "", onChange: (e) => setForm((s) => ({ ...s, [f.key]: e.target.value })), className: "w-full outline-none text-sm font-medium" })))), /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-0 left-0 right-0 bg-white border-t border-stone-100 p-4 flex gap-2", style: { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" } }, editing !== "new" && /* @__PURE__ */ React.createElement("button", { onClick: () => del(form.id), className: "px-4 rounded-2xl border border-rose-200 text-rose-500 font-semibold text-sm" }, "Hapus"), /* @__PURE__ */ React.createElement("button", { onClick: save, className: "flex-1 rounded-2xl py-3.5 font-bold text-white", style: { background: BRAND.bg } }, "Simpan")));
+  }
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(TopBar, { title, onBack, right: /* @__PURE__ */ React.createElement("button", { onClick: openNew, className: "p-1.5 bg-white/15 rounded-full" }, /* @__PURE__ */ React.createElement(Plus, { size: 18 })) }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden" }, data[storageKey].map((row) => /* @__PURE__ */ React.createElement("button", { key: row.id, onClick: () => openEdit(row), className: "w-full text-left px-4 py-3.5" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700" }, row[fields[0].key]), fields[1] && row[fields[1].key] && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 mt-0.5" }, row[fields[1].key]))), data[storageKey].length === 0 && /* @__PURE__ */ React.createElement(EmptyState, { icon: emptyIcon, title: "Belum ada data" }))));
+}
+function PelangganScreen({ ctx, onBack }) {
+  return /* @__PURE__ */ React.createElement(SimpleListScreen, { title: "Pelanggan", ctx, onBack, storageKey: "pelanggan", emptyIcon: Users, fields: [{ key: "nama", label: "Nama" }, { key: "no_hp", label: "No. HP" }, { key: "alamat", label: "Alamat" }, { key: "barcode", label: "Barcode Kartu Member (opsional)" }, { key: "diskon_persen", label: "Diskon Otomatis (%)" }] });
+}
+function MekanikScreen({ ctx, onBack }) {
+  return /* @__PURE__ */ React.createElement(SimpleListScreen, { title: "Mekanik / Staff", ctx, onBack, storageKey: "mekanik", emptyIcon: Wrench, fields: [{ key: "nama", label: "Nama" }, { key: "no_hp", label: "No. HP" }] });
+}
+function MetodeScreen({ ctx, onBack }) {
+  return /* @__PURE__ */ React.createElement(SimpleListScreen, { title: "Metode Pembayaran", ctx, onBack, storageKey: "metode_bayar", emptyIcon: CreditCard, fields: [{ key: "nama", label: "Nama Metode" }] });
+}
+function TokoEditScreen({ ctx, onBack }) {
+  const { data, update, notify } = ctx;
+  const [form, setForm] = useState(data.toko);
+  const save = () => {
+    update("toko", form);
+    notify("Profil toko diperbarui");
+    onBack();
+  };
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-24" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Profil Toko", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-3" }, /* @__PURE__ */ React.createElement(Field, { label: "Nama Toko" }, /* @__PURE__ */ React.createElement("input", { value: form.nama, onChange: (e) => setForm((f) => ({ ...f, nama: e.target.value })), className: "w-full outline-none text-sm font-medium" })), /* @__PURE__ */ React.createElement(Field, { label: "Alamat" }, /* @__PURE__ */ React.createElement("input", { value: form.alamat, onChange: (e) => setForm((f) => ({ ...f, alamat: e.target.value })), className: "w-full outline-none text-sm font-medium" })), /* @__PURE__ */ React.createElement(Field, { label: "Pesan Struk (bawah)" }, /* @__PURE__ */ React.createElement("input", { value: form.pesan_bawah, onChange: (e) => setForm((f) => ({ ...f, pesan_bawah: e.target.value })), className: "w-full outline-none text-sm font-medium" }))), /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-0 left-0 right-0 bg-white border-t border-stone-100 p-4", style: { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" } }, /* @__PURE__ */ React.createElement("button", { onClick: save, className: "w-full rounded-2xl py-3.5 font-bold text-white", style: { background: BRAND.bg } }, "Simpan")));
+}
+function ImportDataScreen({ ctx, onBack }) {
+  var _a;
+  const { data, update, notify, setTab } = ctx;
+  const [done, setDone] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [importProgress, setImportProgress] = useState(null);
+  const fileInputRef = React.useRef(null);
+  const exportBackup = () => {
+    const backup = {
+      toko: data.toko,
+      barang: data.barang,
+      pelanggan: data.pelanggan,
+      mekanik: data.mekanik,
+      metode_bayar: data.metode_bayar,
+      transaksi: data.transaksi,
+      pengeluaran: data.pengeluaran
+    };
+    const blob = new Blob([JSON.stringify(backup)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const safeName = (data.toko.nama || "toko").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    a.href = url;
+    a.download = `backup-${safeName}-${todayStr()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    notify("File backup diunduh");
+  };
+  const handleFile = (file) => {
+    setErrorMsg("");
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const parsed = JSON.parse(e.target.result);
+        if (!parsed || !Array.isArray(parsed.barang)) {
+          setErrorMsg("File tidak dikenali. Pastikan ini file backup yang benar (.json).");
+          return;
+        }
+        setPreview(parsed);
+      } catch (err) {
+        setErrorMsg("Gagal membaca file. Pastikan formatnya JSON yang valid.");
+      }
+    };
+    reader.readAsText(file);
+  };
+  const confirmImport = async () => {
+    let barangArr = preview.barang || [];
+    const needUpload = barangArr.filter((b) => b.gambar && b.gambar.startsWith("data:"));
+    let photoFailCount = 0;
+    const { data: userData, error: userErr } = await sb.auth.getUser();
+    if (userErr || !(userData == null ? void 0 : userData.user)) {
+      setErrorMsg("Sesi login bermasalah, coba refresh halaman dan login ulang.");
+      return;
+    }
+    const userId = userData.user.id;
+    if (needUpload.length > 0) {
+      setImportProgress({ done: 0, total: needUpload.length });
+      barangArr = [...barangArr];
+      let doneCount = 0;
+      const chunkSize = 5;
+      for (let i = 0; i < needUpload.length; i += chunkSize) {
+        const chunk = needUpload.slice(i, i + chunkSize);
+        await Promise.all(
+          chunk.map(async (item) => {
+            try {
+              const res = await fetch(item.gambar);
+              const blob = await res.blob();
+              const path = `${userId}/${item.id}-${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+              const { error } = await sb.storage.from("item-photos").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+              if (error) throw error;
+              const { data: pub } = sb.storage.from("item-photos").getPublicUrl(path);
+              const idx = barangArr.findIndex((b) => b.id === item.id);
+              if (idx >= 0) barangArr[idx] = { ...barangArr[idx], gambar: pub.publicUrl };
+            } catch (e) {
+              photoFailCount++;
+              const idx = barangArr.findIndex((b) => b.id === item.id);
+              if (idx >= 0) barangArr[idx] = { ...barangArr[idx], gambar: "" };
+            }
+            doneCount++;
+            setImportProgress({ done: doneCount, total: needUpload.length });
+          })
+        );
+      }
+    }
+    setImportProgress({ done: needUpload.length, total: needUpload.length, saving: true });
+    const results = await Promise.all([
+      saveKey(userId, "toko", preview.toko || data.toko),
+      saveKey(userId, "barang", barangArr),
+      saveKey(userId, "pelanggan", preview.pelanggan || []),
+      saveKey(userId, "mekanik", preview.mekanik || []),
+      saveKey(userId, "metode_bayar", preview.metode_bayar || data.metode_bayar),
+      saveKey(userId, "transaksi", preview.transaksi || []),
+      saveKey(userId, "pengeluaran", preview.pengeluaran || [])
+    ]);
+    setImportProgress(null);
+    if (!results.every(Boolean)) {
+      setErrorMsg("Gagal menyimpan sebagian data ke server (mungkin koneksi terputus atau data terlalu besar). Coba lagi.");
+      return;
+    }
+    update("toko", preview.toko || data.toko);
+    update("barang", barangArr);
+    update("pelanggan", preview.pelanggan || []);
+    update("mekanik", preview.mekanik || []);
+    update("metode_bayar", preview.metode_bayar || data.metode_bayar);
+    update("transaksi", preview.transaksi || []);
+    update("pengeluaran", preview.pengeluaran || []);
+    if (photoFailCount > 0) {
+      notify(`Data tersimpan, tapi ${photoFailCount} foto gagal diupload (cek storage bucket sudah dibuat)`);
+    } else {
+      notify("Data berhasil di-restore");
+    }
+    setDone(true);
+    notify("Data berhasil di-restore");
+  };
+  if (importProgress) {
+    const pct = importProgress.total > 0 ? Math.round(importProgress.done / importProgress.total * 100) : 100;
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Import Backup" }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-16 flex flex-col items-center text-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-14 h-14 border-4 border-stone-200 rounded-full animate-spin mb-5", style: { borderTopColor: BRAND.bg } }), importProgress.saving ? /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 mb-1" }, "Menyimpan data ke server...") : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 mb-1" }, "Mengupload foto produk..."), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-500 mb-4" }, importProgress.done, " dari ", importProgress.total, " foto"), /* @__PURE__ */ React.createElement("div", { className: "w-full max-w-xs h-2.5 rounded-full bg-stone-100 overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "h-full rounded-full transition-all", style: { width: `${pct}%`, background: BRAND.accent } }))), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 mt-4" }, "Jangan tutup halaman ini dulu")));
+  }
+  if (done) {
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Import Backup", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-10 flex flex-col items-center text-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4" }, /* @__PURE__ */ React.createElement(Check, { size: 28, className: "text-emerald-600" })), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 text-lg mb-1" }, "Data berhasil dipulihkan"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-500 mb-6" }, "Semua data dari file backup sudah masuk ke akun ini."), /* @__PURE__ */ React.createElement("button", { onClick: () => {
+      onBack();
+      setTab("dashboard");
+    }, className: "px-6 py-3 rounded-2xl font-bold text-white", style: { background: BRAND.bg } }, "Kembali ke Beranda")));
+  }
+  if (preview) {
+    const ringkasan = [
+      { label: "Nama Toko", value: ((_a = preview.toko) == null ? void 0 : _a.nama) || "-" },
+      { label: "Item / Layanan", value: `${(preview.barang || []).length} item` },
+      { label: "Pelanggan", value: `${(preview.pelanggan || []).length} orang` },
+      { label: "Riwayat Transaksi", value: `${(preview.transaksi || []).length} transaksi` }
+    ];
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Konfirmasi Import", onBack: () => setPreview(null) }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4" }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-4 border", style: { background: "#eff6ff", borderColor: BRAND.accent } }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700 mb-1" }, "\u26A0\uFE0F Perhatian"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-600 leading-relaxed" }, "Proses ini akan ", /* @__PURE__ */ React.createElement("b", null, "mengganti semua data"), " di akun ", /* @__PURE__ */ React.createElement("b", null, ctx.userEmail), " saat ini dengan isi file backup ini. Data yang sudah ada sebelumnya akan hilang.")), /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-2" }, "Isi File Backup"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden mb-6" }, ringkasan.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, r.label), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-bold text-stone-700" }, r.value)))), /* @__PURE__ */ React.createElement("button", { onClick: confirmImport, className: "w-full rounded-2xl py-3.5 font-bold text-white active:scale-[0.98] transition", style: { background: BRAND.bg } }, "Ya, Restore Data Sekarang"), errorMsg && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-rose-500 mt-3 text-center" }, errorMsg)));
+  }
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Import / Export Backup", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-5" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-2" }, "Export"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-600 mb-3" }, "Simpan seluruh data akun ", /* @__PURE__ */ React.createElement("b", null, ctx.userEmail), " saat ini jadi file, untuk dipindahkan ke akun/toko lain atau sebagai cadangan."), /* @__PURE__ */ React.createElement("button", { onClick: exportBackup, className: "w-full rounded-xl py-2.5 font-bold text-sm border", style: { borderColor: BRAND.bg, color: BRAND.bg } }, "Download File Backup"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-2" }, "Import"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-600 mb-3" }, "Pilih file backup (.json) untuk memulihkan data ke akun ini. Ini akan menimpa data yang ada saat ini."), /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      ref: fileInputRef,
+      type: "file",
+      accept: ".json,application/json",
+      className: "hidden",
+      onChange: (e) => e.target.files[0] && handleFile(e.target.files[0])
+    }
+  ), /* @__PURE__ */ React.createElement("button", { onClick: () => fileInputRef.current.click(), className: "w-full rounded-xl py-2.5 font-bold text-white text-sm", style: { background: BRAND.bg } }, "Pilih File Backup"), errorMsg && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-rose-500 mt-2" }, errorMsg)))));
+}
+function PinKeypad({ value, onChange, maxLen = 6 }) {
+  const press = (d) => {
+    if (value.length >= maxLen) return;
+    onChange(value + d);
+  };
+  const backspace = () => onChange(value.slice(0, -1));
+  return /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-3 w-full max-w-[280px] mx-auto" }, ["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => /* @__PURE__ */ React.createElement("button", { key: d, onClick: () => press(d), className: "h-14 rounded-2xl bg-white border border-stone-200 text-xl font-bold text-stone-700 active:bg-stone-100" }, d)), /* @__PURE__ */ React.createElement("div", null), /* @__PURE__ */ React.createElement("button", { onClick: () => press("0"), className: "h-14 rounded-2xl bg-white border border-stone-200 text-xl font-bold text-stone-700 active:bg-stone-100" }, "0"), /* @__PURE__ */ React.createElement("button", { onClick: backspace, className: "h-14 rounded-2xl bg-white border border-stone-200 flex items-center justify-center text-stone-500 active:bg-stone-100" }, "\u232B"));
+}
+function PinGateScreen({ ctx, onBack, target }) {
+  const { data, setScreen, setItemUnlocked, pinActionRef } = ctx;
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState(false);
+  const correctPin = data.security.pin;
+  const handleChange = (v) => {
+    setError(false);
+    setPin(v);
+    if (v.length === correctPin.length) {
+      if (v === correctPin) {
+        if (pinActionRef.current) {
+          const action = pinActionRef.current;
+          pinActionRef.current = null;
+          action();
+        } else {
+          setItemUnlocked(true);
+          setScreen(target);
+        }
+      } else {
+        setError(true);
+        setTimeout(() => setPin(""), 400);
+      }
+    }
+  };
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Menu Terkunci", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-10 flex flex-col items-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-14 h-14 rounded-2xl flex items-center justify-center mb-4", style: { background: "#dbeafe" } }, /* @__PURE__ */ React.createElement(Settings, { size: 24, style: { color: BRAND.bg } })), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-500 mb-6 text-center" }, "Menu ini dikunci. Masukkan PIN admin untuk melanjutkan."), /* @__PURE__ */ React.createElement("div", { className: "flex gap-3 mb-8" }, Array.from({ length: correctPin.length }).map((_, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: `w-3.5 h-3.5 rounded-full ${i < pin.length ? "" : "bg-stone-200"}`, style: i < pin.length ? { background: error ? "#e11d48" : BRAND.bg } : {} }))), error && /* @__PURE__ */ React.createElement("p", { className: "text-rose-500 text-xs font-semibold -mt-6 mb-6" }, "PIN salah, coba lagi"), /* @__PURE__ */ React.createElement(PinKeypad, { value: pin, onChange: handleChange, maxLen: correctPin.length })));
+}
+function Toggle({ label, value, onChange, disabled }) {
+  return /* @__PURE__ */ React.createElement("button", { onClick: () => !disabled && onChange(!value), disabled, className: `w-full flex items-center justify-between py-3 ${disabled ? "opacity-40" : ""}` }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-700 text-left pr-3" }, label), /* @__PURE__ */ React.createElement("span", { className: `shrink-0 w-12 h-7 rounded-full relative transition-colors ${value ? "" : "bg-stone-200"}`, style: value ? { background: BRAND.bg } : {} }, /* @__PURE__ */ React.createElement("span", { className: `absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-all ${value ? "left-[22px]" : "left-0.5"}` })));
+}
+function SecurityScreen({ ctx, onBack }) {
+  const { data, update, notify, logout, userEmail } = ctx;
+  const [pinBaru, setPinBaru] = useState("");
+  const [lockItemMenu, setLockItemMenu] = useState(data.security.lock_item_menu);
+  const [lockDeleteTransaksi, setLockDeleteTransaksi] = useState(data.security.lock_delete_transaksi);
+  const hasPin = !!data.security.pin;
+  const save = () => {
+    const newPin = pinBaru.trim() || data.security.pin;
+    if ((lockItemMenu || lockDeleteTransaksi) && !newPin) {
+      notify("Set PIN dulu sebelum mengaktifkan kunci");
+      return;
+    }
+    if (pinBaru.trim() && pinBaru.trim().length < 4) {
+      notify("PIN minimal 4 digit");
+      return;
+    }
+    update("security", { pin: newPin, require_login: false, lock_item_menu: lockItemMenu, lock_delete_transaksi: lockDeleteTransaksi });
+    notify("Pengaturan keamanan disimpan");
+    onBack();
+  };
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-24" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Keamanan", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-3.5" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-1" }, "Akun Aktif"), /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700" }, userEmail)), /* @__PURE__ */ React.createElement(Field, { label: hasPin ? "Ubah PIN Menu (kosongkan jika tidak diubah)" : "Buat PIN Menu" }, /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      type: "tel",
+      inputMode: "numeric",
+      value: pinBaru,
+      onChange: (e) => setPinBaru(e.target.value.replace(/\D/g, "").slice(0, 6)),
+      className: "w-full outline-none text-sm font-medium tracking-widest",
+      placeholder: hasPin ? "\u2022\u2022\u2022\u2022" : "Contoh: 1234"
+    }
+  )), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 -mt-2 px-1" }, hasPin ? "PIN sudah aktif." : "Belum ada PIN. Isi untuk mengaktifkan fitur kunci di bawah."), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 px-4" }, /* @__PURE__ */ React.createElement(Toggle, { label: "Kunci Menu Item / Layanan (perlu PIN untuk buka)", value: lockItemMenu, onChange: setLockItemMenu }), /* @__PURE__ */ React.createElement(Toggle, { label: "Kunci Hapus Transaksi (perlu PIN pemilik)", value: lockDeleteTransaksi, onChange: setLockDeleteTransaksi })), /* @__PURE__ */ React.createElement("button", { onClick: logout, className: "w-full text-center text-sm font-semibold py-2 flex items-center justify-center gap-2", style: { color: BRAND.bg } }, /* @__PURE__ */ React.createElement(Users, { size: 15 }), " Logout / Ganti Akun Toko")), /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-0 left-0 right-0 bg-white border-t border-stone-100 p-4", style: { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" } }, /* @__PURE__ */ React.createElement("button", { onClick: save, className: "w-full rounded-2xl py-3.5 font-bold text-white", style: { background: BRAND.bg } }, "Simpan")));
+}
+function ScannerModal({ title, onDetected, onClose }) {
+  const [manual, setManual] = useState("");
+  const [status, setStatus] = useState("starting");
+  const videoRef = React.useRef(null);
+  const streamRef = React.useRef(null);
+  const rafRef = React.useRef(null);
+  const detectorRef = React.useRef(null);
+  const doneRef = React.useRef(false);
+  useEffect(() => {
+    let cancelled = false;
+    const stop = () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
+    };
+    const start = async () => {
+      if (!("BarcodeDetector" in window)) {
+        setStatus("unsupported");
+        return;
+      }
+      try {
+        detectorRef.current = new window.BarcodeDetector({ formats: ["code_128", "code_39", "ean_13", "ean_8", "upc_a", "upc_e", "qr_code"] });
+      } catch (e) {
+        setStatus("unsupported");
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+        setStatus("scanning");
+        scanLoop();
+      } catch (e) {
+        setStatus("denied");
+      }
+    };
+    const scanLoop = async () => {
+      if (cancelled || doneRef.current || !videoRef.current || !detectorRef.current) return;
+      try {
+        const codes = await detectorRef.current.detect(videoRef.current);
+        if (codes && codes.length > 0 && !doneRef.current) {
+          doneRef.current = true;
+          stop();
+          onDetected(codes[0].rawValue);
+          return;
+        }
+      } catch (e) {
+      }
+      rafRef.current = requestAnimationFrame(() => setTimeout(scanLoop, 250));
+    };
+    start();
+    return () => {
+      cancelled = true;
+      stop();
+    };
+  }, []);
+  const submitManual = () => {
+    if (!manual.trim()) return;
+    doneRef.current = true;
+    onDetected(manual.trim());
+  };
+  return /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 z-50 bg-black/90 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between px-4 py-3.5 text-white" }, /* @__PURE__ */ React.createElement("p", { className: "font-bold text-sm" }, title), /* @__PURE__ */ React.createElement("button", { onClick: onClose, className: "p-1.5 bg-white/15 rounded-full" }, /* @__PURE__ */ React.createElement(X, { size: 18 }))), /* @__PURE__ */ React.createElement("div", { className: "flex-1 flex items-center justify-center relative" }, status === "scanning" || status === "starting" ? /* @__PURE__ */ React.createElement("video", { ref: videoRef, className: "w-full h-full object-cover", playsInline: true, muted: true }) : /* @__PURE__ */ React.createElement("div", { className: "px-8 text-center text-white/80 text-sm" }, status === "unsupported" && "Kamera scan otomatis tidak didukung di browser ini. Ketik barcode secara manual di bawah.", status === "denied" && "Tidak bisa mengakses kamera (izin ditolak). Ketik barcode secara manual di bawah."), status === "scanning" && /* @__PURE__ */ React.createElement("div", { className: "absolute inset-x-10 top-1/2 -translate-y-1/2 h-24 border-2 rounded-xl", style: { borderColor: BRAND.accent } })), /* @__PURE__ */ React.createElement("div", { className: "p-4 bg-black/60 flex gap-2" }, /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      value: manual,
+      onChange: (e) => setManual(e.target.value),
+      placeholder: "Atau ketik barcode manual...",
+      className: "flex-1 rounded-xl px-3.5 py-3 text-sm outline-none bg-white"
+    }
+  ), /* @__PURE__ */ React.createElement("button", { onClick: submitManual, className: "px-4 rounded-xl font-bold text-white text-sm", style: { background: BRAND.accent } }, "OK")));
+}
+function CustomerPickerScreen({ ctx, onBack }) {
+  const { data, update, setCartMeta, notify } = ctx;
+  const [q, setQ] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
+  const [addForm, setAddForm] = useState(null);
+  const list = data.pelanggan.filter((p) => !q || p.nama.toLowerCase().includes(q.toLowerCase()) || (p.no_hp || "").includes(q));
+  const pick = (p) => {
+    setCartMeta((m) => ({ ...m, pelanggan_id: p.id }));
+    onBack();
+  };
+  const clearPelanggan = () => {
+    setCartMeta((m) => ({ ...m, pelanggan_id: null }));
+    onBack();
+  };
+  const handleScan = (code) => {
+    setScanOpen(false);
+    const found = data.pelanggan.find((p) => (p.barcode || "").trim() && p.barcode.trim().toLowerCase() === code.trim().toLowerCase());
+    if (found) {
+      pick(found);
+    } else {
+      setAddForm({ nama: "", no_hp: "", barcode: code, diskon_persen: "" });
+      notify("Kartu belum terdaftar, daftarkan sebagai pelanggan baru");
+    }
+  };
+  const saveNewCustomer = () => {
+    if (!addForm.nama.trim()) return notify("Nama pelanggan wajib diisi");
+    const payload = { id: uid(), nama: addForm.nama.trim(), no_hp: addForm.no_hp || "", alamat: "", barcode: addForm.barcode || "", diskon_persen: addForm.diskon_persen || "" };
+    update("pelanggan", (prev) => [...prev, payload]);
+    pick(payload);
+  };
+  if (addForm) {
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-24" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Pelanggan Baru", onBack: () => setAddForm(null) }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-3" }, /* @__PURE__ */ React.createElement(Field, { label: "Nama Pelanggan" }, /* @__PURE__ */ React.createElement("input", { value: addForm.nama, onChange: (e) => setAddForm((f) => ({ ...f, nama: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "Nama", autoFocus: true })), /* @__PURE__ */ React.createElement(Field, { label: "No. HP (opsional)" }, /* @__PURE__ */ React.createElement("input", { value: addForm.no_hp, onChange: (e) => setAddForm((f) => ({ ...f, no_hp: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "08xxxx" })), addForm.barcode && /* @__PURE__ */ React.createElement(Field, { label: "Barcode Kartu Member" }, /* @__PURE__ */ React.createElement("input", { value: addForm.barcode, disabled: true, className: "w-full outline-none text-sm font-medium text-stone-400" })), /* @__PURE__ */ React.createElement(Field, { label: "Diskon Otomatis (%)" }, /* @__PURE__ */ React.createElement("input", { type: "number", value: addForm.diskon_persen, onChange: (e) => setAddForm((f) => ({ ...f, diskon_persen: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "0" }))), /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-0 left-0 right-0 bg-white border-t border-stone-100 p-4", style: { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" } }, /* @__PURE__ */ React.createElement("button", { onClick: saveNewCustomer, className: "w-full rounded-2xl py-3.5 font-bold text-white", style: { background: BRAND.bg } }, "Simpan & Pilih")));
+  }
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(TopBar, { title: "Pilih Pelanggan", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-xl flex items-center px-3 py-2.5 gap-2 border border-stone-200 mb-3" }, /* @__PURE__ */ React.createElement(Search, { size: 16, className: "text-stone-400" }), /* @__PURE__ */ React.createElement("input", { value: q, onChange: (e) => setQ(e.target.value), placeholder: "Cari nama / no. HP...", className: "outline-none text-sm flex-1" })), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-2.5 mb-4" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setScanOpen(true), className: "flex items-center justify-center gap-2 py-3 rounded-2xl border font-semibold text-sm", style: { borderColor: BRAND.bg, color: BRAND.bg } }, /* @__PURE__ */ React.createElement(Search, { size: 16 }), " Scan Kartu"), /* @__PURE__ */ React.createElement("button", { onClick: () => setAddForm({ nama: "", no_hp: "", barcode: "", diskon_persen: "" }), className: "flex items-center justify-center gap-2 py-3 rounded-2xl text-white font-semibold text-sm", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Plus, { size: 16 }), " Pelanggan Baru")), /* @__PURE__ */ React.createElement("button", { onClick: clearPelanggan, className: "w-full text-left px-4 py-3 mb-3 rounded-2xl bg-white border border-stone-100 text-sm text-stone-500 font-medium" }, "Umum / Tanpa Pelanggan"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden" }, list.map((p) => /* @__PURE__ */ React.createElement("button", { key: p.id, onClick: () => pick(p), className: "w-full flex items-center justify-between px-4 py-3 text-left" }, /* @__PURE__ */ React.createElement("div", { className: "min-w-0" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700 truncate" }, p.nama), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400" }, p.no_hp || "-")), Number(p.diskon_persen) > 0 && /* @__PURE__ */ React.createElement(Badge, { tone: "amber" }, "Diskon ", p.diskon_persen, "%"))), list.length === 0 && /* @__PURE__ */ React.createElement(EmptyState, { icon: Users, title: "Pelanggan tidak ditemukan" }))), scanOpen && /* @__PURE__ */ React.createElement(ScannerModal, { title: "Scan Kartu Pelanggan", onDetected: handleScan, onClose: () => setScanOpen(false) }));
+}
+function AuthGateScreen({ view, setView, notify }) {
+  const [form, setForm] = useState({ storeName: "", email: "", password: "" });
+  const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+  const [busy, setBusy] = useState(false);
+  const doLogin = async () => {
+    setError("");
+    setInfo("");
+    setBusy(true);
+    const { error: error2 } = await sb.auth.signInWithPassword({ email: form.email.trim(), password: form.password });
+    setBusy(false);
+    if (error2) setError(error2.message === "Invalid login credentials" ? "Email atau password salah" : error2.message);
+  };
+  const doRegister = async () => {
+    setError("");
+    setInfo("");
+    if (!form.storeName.trim()) return setError("Nama toko wajib diisi");
+    if (!form.email.trim()) return setError("Email wajib diisi");
+    if (form.password.length < 6) return setError("Password minimal 6 karakter");
+    setBusy(true);
+    const { data, error: error2 } = await sb.auth.signUp({
+      email: form.email.trim(),
+      password: form.password,
+      options: { data: { store_name: form.storeName.trim() } }
+    });
+    setBusy(false);
+    if (error2) return setError(error2.message);
+    if (data.session) {
+      await saveKey(data.user.id, "toko", { nama: form.storeName.trim(), alamat: "", catatan: "", pesan_bawah: "Terima Kasih" });
+      notify("Toko berhasil dibuat");
+    } else {
+      setInfo("Akun berhasil dibuat. Silakan cek email kamu untuk konfirmasi sebelum login.");
+      setView("login");
+    }
+  };
+  const doForgot = async () => {
+    setError("");
+    setInfo("");
+    if (!form.email.trim()) return setError("Masukkan email akun kamu");
+    setBusy(true);
+    const { error: error2 } = await sb.auth.resetPasswordForEmail(form.email.trim(), { redirectTo: window.location.origin });
+    setBusy(false);
+    if (error2) return setError(error2.message);
+    setInfo("Link reset password sudah dikirim ke email kamu. Buka email itu untuk lanjut.");
+  };
+  if (view === "forgot") {
+    return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full overflow-y-auto px-6 py-10", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("button", { onClick: () => {
+      setError("");
+      setInfo("");
+      setView("login");
+    }, className: "mb-4 p-1 text-stone-400 flex items-center gap-1 text-sm" }, /* @__PURE__ */ React.createElement(ChevronLeft, { size: 18 }), " Kembali"), /* @__PURE__ */ React.createElement("div", { className: "w-16 h-16 rounded-2xl flex items-center justify-center mb-4 mx-auto", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Store, { size: 28, className: "text-white" })), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 text-lg mb-1 text-center" }, "Lupa Password"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-400 mb-6 text-center max-w-sm mx-auto" }, "Masukkan email akun toko kamu, nanti dikirimkan link untuk membuat password baru."), /* @__PURE__ */ React.createElement("div", { className: "space-y-3 max-w-sm mx-auto" }, /* @__PURE__ */ React.createElement(Field, { label: "Email" }, /* @__PURE__ */ React.createElement("input", { type: "email", value: form.email, onChange: (e) => setForm((f) => ({ ...f, email: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "email@contoh.com" })), error && /* @__PURE__ */ React.createElement("p", { className: "text-rose-500 text-xs font-semibold text-center" }, error), info && /* @__PURE__ */ React.createElement("p", { className: "text-emerald-600 text-xs font-semibold text-center" }, info), /* @__PURE__ */ React.createElement("button", { onClick: doForgot, disabled: busy, className: "w-full rounded-2xl py-3.5 font-bold text-white mt-2 disabled:opacity-50", style: { background: BRAND.bg } }, busy ? "Mengirim..." : "Kirim Link Reset")));
+  }
+  if (view === "register") {
+    return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full overflow-y-auto px-6 py-10", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("button", { onClick: () => {
+      setError("");
+      setInfo("");
+      setView("login");
+    }, className: "mb-4 p-1 text-stone-400 flex items-center gap-1 text-sm" }, /* @__PURE__ */ React.createElement(ChevronLeft, { size: 18 }), " Kembali"), /* @__PURE__ */ React.createElement("div", { className: "w-16 h-16 rounded-2xl flex items-center justify-center mb-4 mx-auto", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Store, { size: 28, className: "text-white" })), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 text-lg mb-1 text-center" }, "Buat Toko Baru"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-400 mb-6 text-center" }, "Data toko kamu tersimpan aman di server, bisa diakses dari HP mana saja"), /* @__PURE__ */ React.createElement("div", { className: "space-y-3 max-w-sm mx-auto" }, /* @__PURE__ */ React.createElement(Field, { label: "Nama Toko" }, /* @__PURE__ */ React.createElement("input", { value: form.storeName, onChange: (e) => setForm((f) => ({ ...f, storeName: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "Contoh: Toko Sinar Jaya" })), /* @__PURE__ */ React.createElement(Field, { label: "Email" }, /* @__PURE__ */ React.createElement("input", { type: "email", value: form.email, onChange: (e) => setForm((f) => ({ ...f, email: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "email@contoh.com" })), /* @__PURE__ */ React.createElement(Field, { label: "Password (min 6 karakter)" }, /* @__PURE__ */ React.createElement("input", { type: "password", value: form.password, onChange: (e) => setForm((f) => ({ ...f, password: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022" })), error && /* @__PURE__ */ React.createElement("p", { className: "text-rose-500 text-xs font-semibold text-center" }, error), info && /* @__PURE__ */ React.createElement("p", { className: "text-emerald-600 text-xs font-semibold text-center" }, info), /* @__PURE__ */ React.createElement("button", { onClick: doRegister, disabled: busy, className: "w-full rounded-2xl py-3.5 font-bold text-white mt-2 disabled:opacity-50", style: { background: BRAND.bg } }, busy ? "Memproses..." : "Buat Toko")));
+  }
+  return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full overflow-y-auto px-6 py-10", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("div", { className: "w-16 h-16 rounded-2xl flex items-center justify-center mb-4 mx-auto", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Store, { size: 28, className: "text-white" })), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 text-lg mb-1 text-center" }, "Masuk ke Toko Kamu"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-400 mb-6 text-center" }, "Kasir Toko"), /* @__PURE__ */ React.createElement("div", { className: "space-y-3 max-w-sm mx-auto" }, /* @__PURE__ */ React.createElement(Field, { label: "Email" }, /* @__PURE__ */ React.createElement("input", { type: "email", value: form.email, onChange: (e) => setForm((f) => ({ ...f, email: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "email@contoh.com" })), /* @__PURE__ */ React.createElement(Field, { label: "Password" }, /* @__PURE__ */ React.createElement("input", { type: "password", value: form.password, onChange: (e) => setForm((f) => ({ ...f, password: e.target.value })), className: "w-full outline-none text-sm font-medium", placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022" })), error && /* @__PURE__ */ React.createElement("p", { className: "text-rose-500 text-xs font-semibold text-center" }, error), info && /* @__PURE__ */ React.createElement("p", { className: "text-emerald-600 text-xs font-semibold text-center" }, info), /* @__PURE__ */ React.createElement("button", { onClick: doLogin, disabled: busy, className: "w-full rounded-2xl py-3.5 font-bold text-white mt-2 disabled:opacity-50", style: { background: BRAND.bg } }, busy ? "Masuk..." : "Masuk"), /* @__PURE__ */ React.createElement("button", { onClick: () => {
+    setError("");
+    setInfo("");
+    setView("forgot");
+  }, className: "w-full text-center text-xs font-semibold py-1", style: { color: BRAND.bg } }, "Lupa Password?"), /* @__PURE__ */ React.createElement("div", { className: "pt-3 border-t border-stone-200 mt-3" }, /* @__PURE__ */ React.createElement("button", { onClick: () => {
+    setError("");
+    setInfo("");
+    setView("register");
+  }, className: "w-full rounded-2xl py-3 font-bold border", style: { borderColor: BRAND.bg, color: BRAND.bg } }, "Buat Toko Baru"))));
+}
+function ResetPasswordScreen({ notify, onDone }) {
+  const [pw, setPw] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    setError("");
+    if (pw.length < 6) return setError("Password minimal 6 karakter");
+    if (pw !== pwConfirm) return setError("Konfirmasi password tidak sama");
+    setBusy(true);
+    const { error: error2 } = await sb.auth.updateUser({ password: pw });
+    setBusy(false);
+    if (error2) return setError(error2.message);
+    notify("Password berhasil diganti");
+    onDone();
+  };
+  return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full overflow-y-auto px-6 py-10", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("div", { className: "w-16 h-16 rounded-2xl flex items-center justify-center mb-4 mx-auto", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Store, { size: 28, className: "text-white" })), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 text-lg mb-1 text-center" }, "Buat Password Baru"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-400 mb-6 text-center" }, "untuk akun toko kamu"), /* @__PURE__ */ React.createElement("div", { className: "space-y-3 max-w-sm mx-auto" }, /* @__PURE__ */ React.createElement(Field, { label: "Password Baru" }, /* @__PURE__ */ React.createElement("input", { type: "password", value: pw, onChange: (e) => setPw(e.target.value), className: "w-full outline-none text-sm font-medium", placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022" })), /* @__PURE__ */ React.createElement(Field, { label: "Konfirmasi Password Baru" }, /* @__PURE__ */ React.createElement("input", { type: "password", value: pwConfirm, onChange: (e) => setPwConfirm(e.target.value), className: "w-full outline-none text-sm font-medium", placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022" })), error && /* @__PURE__ */ React.createElement("p", { className: "text-rose-500 text-xs font-semibold text-center" }, error), /* @__PURE__ */ React.createElement("button", { onClick: submit, disabled: busy, className: "w-full rounded-2xl py-3.5 font-bold text-white mt-2 disabled:opacity-50", style: { background: BRAND.bg } }, busy ? "Menyimpan..." : "Simpan Password Baru")));
+}
+function PrinterSettingsScreen({ ctx, onBack }) {
+  const { data } = ctx;
+  const testPrint = () => {
+    window.print();
+  };
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Printer", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700 mb-2" }, "Cara Mencetak Struk"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-600 leading-relaxed" }, "Aplikasi ini mencetak lewat sistem print bawaan HP kamu (bukan pairing langsung). Kalau printer struk kamu (misal RPP02, atau merek lain) sudah punya ", /* @__PURE__ */ React.createElement("b", null, "aplikasi driver/print service"), " yang terinstall di HP, printer itu akan ", /* @__PURE__ */ React.createElement("b", null, "otomatis muncul sebagai pilihan"), ' setiap kali kamu tekan tombol "Cetak / Bagikan Struk" di halaman transaksi.')), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700 mb-2" }, "Belum punya aplikasi driver printer?"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-600 leading-relaxed mb-1" }, "Cari di Play Store sesuai merek printer kamu, contoh: ", /* @__PURE__ */ React.createElement("b", null, '"RPP02 Printer"'), ', atau cari nama merek + "print service". Install, lalu ikuti langkah pairing Bluetooth di aplikasi itu. Setelah terpasang, printer otomatis bisa dipakai dari aplikasi manapun termasuk Kasir Toko ini.')), /* @__PURE__ */ React.createElement("button", { onClick: testPrint, className: "w-full rounded-2xl py-3.5 font-bold text-white flex items-center justify-center gap-2", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Printer, { size: 18 }), " Coba Cetak Test")), /* @__PURE__ */ React.createElement("div", { className: "hidden print:block font-mono text-black", style: { width: "300px", margin: "0 auto", fontSize: "12px" } }, /* @__PURE__ */ React.createElement("div", { className: "text-center mb-2" }, /* @__PURE__ */ React.createElement("p", { className: "font-bold text-sm" }, data.toko.nama), data.toko.alamat && /* @__PURE__ */ React.createElement("p", null, data.toko.alamat)), /* @__PURE__ */ React.createElement("p", null, "--------------------------------"), /* @__PURE__ */ React.createElement("p", null, "Ini adalah cetak percobaan (test print)"), /* @__PURE__ */ React.createElement("p", null, "--------------------------------"), /* @__PURE__ */ React.createElement("p", { className: "text-center mt-2" }, data.toko.pesan_bawah || "Terima Kasih")));
+}
+function PhotoCaptureModal({ onCaptured, onClose }) {
+  const [status, setStatus] = useState("starting");
+  const videoRef = React.useRef(null);
+  const streamRef = React.useRef(null);
+  useEffect(() => {
+    let cancelled = false;
+    const stop = () => {
+      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
+    };
+    const start = async () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setStatus("unsupported");
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 1280 } } });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+        setStatus("ready");
+      } catch (e) {
+        setStatus("denied");
+      }
+    };
+    start();
+    return () => {
+      cancelled = true;
+      stop();
+    };
+  }, []);
+  const capture = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx2d = canvas.getContext("2d");
+    ctx2d.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(
+      (blob) => {
+        if (blob) onCaptured(blob);
+      },
+      "image/jpeg",
+      0.85
+    );
+  };
+  return /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 z-50 bg-black flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between px-4 py-3.5 text-white" }, /* @__PURE__ */ React.createElement("p", { className: "font-bold text-sm" }, "Ambil Foto Item"), /* @__PURE__ */ React.createElement("button", { onClick: onClose, className: "p-1.5 bg-white/15 rounded-full" }, /* @__PURE__ */ React.createElement(X, { size: 18 }))), /* @__PURE__ */ React.createElement("div", { className: "flex-1 flex items-center justify-center relative" }, status === "ready" || status === "starting" ? /* @__PURE__ */ React.createElement("video", { ref: videoRef, className: "w-full h-full object-cover", playsInline: true, muted: true }) : /* @__PURE__ */ React.createElement("div", { className: "px-8 text-center text-white/80 text-sm" }, status === "unsupported" && "Kamera langsung tidak didukung di browser ini. Gunakan tombol Galeri sebagai gantinya.", status === "denied" && "Tidak bisa mengakses kamera (izin ditolak). Gunakan tombol Galeri sebagai gantinya.")), status === "ready" && /* @__PURE__ */ React.createElement("div", { className: "p-6 flex items-center justify-center" }, /* @__PURE__ */ React.createElement("button", { onClick: capture, className: "w-16 h-16 rounded-full bg-white border-4 border-white/30 active:scale-90 transition" })));
+}
+const SERVIS_STATUS_LABEL = {
+  pending: "Menunggu",
+  diagnosa: "Diagnosa",
+  menunggu_sparepart: "Tunggu Sparepart",
+  dikerjakan: "Dikerjakan",
+  selesai: "Selesai",
+  gagal: "Gagal",
+  diambil: "Sudah Diambil"
+};
+function servisStatusTone(status) {
+  const s = (status || "").toLowerCase();
+  if (s === "selesai" || s === "diambil") return "green";
+  if (s === "gagal") return "red";
+  if (s === "dikerjakan" || s === "diagnosa") return "amber";
+  return "default";
+}
+function ServisHpScreen({ ctx, onBack }) {
+  const { setScreen } = ctx;
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [list, setList] = useState([]);
+  const [q, setQ] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setErrorMsg("");
+      try {
+        const { data, error } = await sbServis.from("services_kasir_view").select("id, service_number, customer_name, customer_phone, device_brand, device_model, complaint, status, total_cost, remaining_balance, created_at").order("created_at", { ascending: false }).limit(200);
+        if (error) throw error;
+        if (!cancelled) setList(data || []);
+      } catch (e) {
+        if (!cancelled) setErrorMsg(e.message || "Gagal mengambil data dari aplikasi Servis HP");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const filtered = list.filter((s) => {
+    if (!q) return true;
+    const hay = `${s.service_number} ${s.customer_name} ${s.customer_phone} ${s.device_brand} ${s.device_model}`.toLowerCase();
+    return hay.includes(q.toLowerCase());
+  });
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Servis HP", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-xl flex items-center px-3 py-2.5 gap-2 border border-stone-200 mb-3" }, /* @__PURE__ */ React.createElement(Search, { size: 16, className: "text-stone-400" }), /* @__PURE__ */ React.createElement("input", { value: q, onChange: (e) => setQ(e.target.value), placeholder: "Cari nomor servis, nama, atau HP...", className: "outline-none text-sm flex-1" })), loading && /* @__PURE__ */ React.createElement("div", { className: "py-16 flex flex-col items-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-8 h-8 border-4 border-stone-200 rounded-full animate-spin mb-3", style: { borderTopColor: BRAND.bg } }), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-400" }, "Mengambil data dari Servis HP...")), !loading && errorMsg && /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 border border-rose-200 bg-rose-50" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-rose-600 mb-1" }, "Gagal memuat data"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-rose-500" }, errorMsg)), !loading && !errorMsg && /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden" }, filtered.map((s) => /* @__PURE__ */ React.createElement("button", { key: s.id, onClick: () => setScreen({ name: "servis-hp-detail", trxId: s.id }), className: "w-full text-left px-4 py-3.5" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-1" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700" }, "#", s.service_number), /* @__PURE__ */ React.createElement(Badge, { tone: servisStatusTone(s.status) }, SERVIS_STATUS_LABEL[s.status] || s.status || "-")), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-600" }, s.customer_name, " \xB7 ", s.customer_phone), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 mt-0.5" }, s.device_brand, " ", s.device_model, " \xB7 ", fmtDate(s.created_at)), s.complaint && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 mt-1 truncate" }, "Keluhan: ", s.complaint))), filtered.length === 0 && /* @__PURE__ */ React.createElement(EmptyState, { icon: Wrench, title: "Belum ada data servis", hint: q ? "Coba kata kunci lain" : "" }))));
+}
+function ServisHpDetailScreen({ ctx, onBack, trxId }) {
+  const { data, update, notify, setScreen } = ctx;
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [s, setS] = useState(null);
+  const [payOpen, setPayOpen] = useState(false);
+  const [payAmount, setPayAmount] = useState("");
+  const [payMetode, setPayMetode] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setErrorMsg("");
+      try {
+        const { data: data2, error } = await sbServis.from("services_kasir_view").select("*").eq("id", trxId).single();
+        if (error) throw error;
+        if (!cancelled) {
+          setS(data2);
+          const sisa = Number(data2.remaining_balance) || 0;
+          const jatuhTempo = sisa > 0 ? sisa : Number(data2.total_cost) || 0;
+          setPayAmount(String(jatuhTempo));
+          setPayMetode(data2 && ctx.data.metode_bayar[0] ? ctx.data.metode_bayar[0].id : null);
+        }
+      } catch (e) {
+        if (!cancelled) setErrorMsg(e.message || "Gagal mengambil detail servis");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [trxId]);
+  const openPay = () => {
+    setPayMetode(data.metode_bayar[0] ? data.metode_bayar[0].id : null);
+    setPayOpen(true);
+  };
+  const confirmPay = () => {
+    const amount = Number(String(payAmount).replace(/\D/g, "")) || 0;
+    if (amount <= 0) return notify("Nominal pembayaran harus diisi");
+    const metode = data.metode_bayar.find((m) => m.id === payMetode);
+    const namaItem = `Servis ${s.device_brand || ""} ${s.device_model || ""}`.trim() + (s.complaint ? ` - ${s.complaint}` : "");
+    const trx = {
+      id: uid(),
+      kode: genKode(),
+      tanggal: (/* @__PURE__ */ new Date()).toISOString(),
+      pelanggan_id: null,
+      pelanggan_nama: s.customer_name || "Umum",
+      mekanik_id: null,
+      mekanik_nama: s.technician_name || "",
+      metode_bayar_id: payMetode || data.metode_bayar[0] && data.metode_bayar[0].id,
+      items: [{ barang_id: null, nama: namaItem, harga: amount, qty: 1, satuan: "jasa", mode: "eceran", subtotal: amount }],
+      diskon: 0,
+      total: amount,
+      bayar: amount,
+      profit: amount,
+      status_bayar: 1,
+      keterangan: `Servis #${s.service_number}`
+    };
+    update("transaksi", (prev) => [...prev, trx]);
+    notify("Pembayaran tercatat di pembukuan");
+    setPayOpen(false);
+    setScreen({ name: "trx-detail", trx });
+  };
+  return /* @__PURE__ */ React.createElement("div", { className: "pb-24" }, /* @__PURE__ */ React.createElement(TopBar, { title: s ? `#${s.service_number}` : "Detail Servis", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4 space-y-3" }, loading && /* @__PURE__ */ React.createElement("div", { className: "py-16 flex flex-col items-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-8 h-8 border-4 border-stone-200 rounded-full animate-spin mb-3", style: { borderTopColor: BRAND.bg } })), !loading && errorMsg && /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 border border-rose-200 bg-rose-50" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-rose-600 mb-1" }, "Gagal memuat data"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-rose-500" }, errorMsg)), !loading && s && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4" }, /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "Status"), /* @__PURE__ */ React.createElement(Badge, { tone: servisStatusTone(s.status) }, SERVIS_STATUS_LABEL[s.status] || s.status || "-")), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "Pelanggan"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold" }, s.customer_name)), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "No. HP"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold" }, s.customer_phone)), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "Perangkat"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold" }, s.device_brand, " ", s.device_model)), s.imei_1 && /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "IMEI"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold" }, s.imei_1)), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "Teknisi"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold" }, s.technician_name || "-"))), s.complaint && /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-stone-400 uppercase mb-1.5" }, "Keluhan"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-700" }, s.complaint)), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 p-4" }, /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "Estimasi Biaya"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold" }, rupiah(s.estimated_cost || 0))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "Total Biaya"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-bold", style: { color: BRAND.bg } }, rupiah(s.total_cost || 0))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "DP"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold" }, rupiah(s.down_payment || 0))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-stone-500" }, "Sisa Bayar"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-bold text-rose-500" }, rupiah(s.remaining_balance || 0)))))), !loading && s && /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-0 left-0 right-0 bg-white border-t border-stone-100 p-4", style: { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" } }, /* @__PURE__ */ React.createElement("button", { onClick: openPay, className: "w-full rounded-2xl py-3.5 font-bold text-white flex items-center justify-center gap-2", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Receipt, { size: 18 }), " Catat Pembayaran & Cetak Struk")), payOpen && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 z-50 bg-black/50 flex items-end" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white w-full rounded-t-3xl p-5" }, /* @__PURE__ */ React.createElement("p", { className: "font-bold text-stone-700 mb-3" }, "Catat Pembayaran Servis"), /* @__PURE__ */ React.createElement(Field, { label: "Jumlah Dibayar" }, /* @__PURE__ */ React.createElement(CurrencyInput, { value: payAmount, onChange: setPayAmount })), /* @__PURE__ */ React.createElement("div", { className: "mt-3" }, /* @__PURE__ */ React.createElement("label", { className: "text-[11px] font-semibold text-stone-400 uppercase block mb-1.5" }, "Metode Bayar"), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 flex-wrap" }, data.metode_bayar.map((m) => /* @__PURE__ */ React.createElement("button", { key: m.id, onClick: () => setPayMetode(m.id), className: `px-3 py-1.5 rounded-full text-xs font-semibold border ${payMetode === m.id ? "text-white border-transparent" : "border-stone-200 text-stone-500"}`, style: payMetode === m.id ? { background: BRAND.bg } : {} }, m.nama)))), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 mt-3" }, "Ini akan membuat catatan transaksi baru di Kasir Toko (masuk ke Penjualan, Laporan, Riwayat), lalu bisa langsung dicetak strukanya."), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mt-4" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setPayOpen(false), className: "flex-1 rounded-2xl py-3 font-bold border border-stone-200 text-stone-600" }, "Batal"), /* @__PURE__ */ React.createElement("button", { onClick: confirmPay, className: "flex-1 rounded-2xl py-3 font-bold text-white", style: { background: BRAND.bg } }, "Simpan & Lanjut")))));
+}
+
+</script>
+
+<script>
+
+try {
+  const root = ReactDOM.createRoot(document.getElementById("root"));
+  root.render(
+    React.createElement(
+      "div",
+      { style: { height: "100dvh", width: "100%", overflow: "hidden" } },
+      React.createElement(KasirApp)
+    )
+  );
+} catch (err) {
+  document.getElementById("root").innerHTML =
+    '<div style="padding:24px;font-family:sans-serif;color:#7f1d1d;background:#fee2e2;margin:16px;border-radius:12px;">' +
+    '<b>Terjadi error saat menjalankan aplikasi:</b><br><br><pre style="white-space:pre-wrap;font-size:12px;">' +
+    (err && err.stack ? err.stack : String(err)) +
+    '</pre></div>';
+  console.error(err);
+}
+
+</script>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").catch((e) => console.warn("SW register failed", e));
+    });
+  }
+</script>
+</body>
+</html>
