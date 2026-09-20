@@ -100,6 +100,10 @@ const rupiah = (n) => {
   const v = Math.round(Number(n) || 0);
   return "Rp" + v.toLocaleString("id-ID");
 };
+const stokSortKey = (s) => {
+  const v = Number(s) || 0;
+  return v < 0 ? 1e4 + Math.abs(v) : v;
+};
 const todayStr = () => (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
 const fmtDate = (iso) => {
   if (!iso) return "-";
@@ -447,7 +451,7 @@ function ScreenRouter({ screen, ctx }) {
 function Dashboard({ ctx }) {
   const { data, setTab, setScreen, openItemMenu } = ctx;
   const isEmpty = data.barang.length === 0;
-  const lowStockItems = data.barang.filter((b) => b.jenis === "barang" && b.stok !== null && b.stok !== void 0 && b.stok <= 2).sort((a, b) => a.stok - b.stok);
+  const lowStockItems = data.barang.filter((b) => b.jenis === "barang" && b.stok !== null && b.stok !== void 0 && b.stok <= 2).sort((a, b) => stokSortKey(a.stok) - stokSortKey(b.stok));
   const today = todayStr();
   const trxToday = data.transaksi.filter((t) => (t.tanggal || "").slice(0, 10) === today);
   const totalToday = trxToday.reduce((s, t) => s + Number(t.bayar || t.total || 0), 0);
@@ -768,7 +772,7 @@ function ItemListScreen({ ctx, onBack }) {
 }
 function StokMenipisScreen({ ctx, onBack }) {
   const { data, setScreen } = ctx;
-  const items = data.barang.filter((b) => b.jenis === "barang" && b.stok !== null && b.stok !== void 0 && b.stok <= 2).sort((a, b) => a.stok - b.stok);
+  const items = data.barang.filter((b) => b.jenis === "barang" && b.stok !== null && b.stok !== void 0 && b.stok <= 2).sort((a, b) => stokSortKey(a.stok) - stokSortKey(b.stok));
   return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Stok Menipis", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4" }, items.length === 0 ? /* @__PURE__ */ React.createElement(EmptyState, { icon: Package, title: "Semua stok item aman" }) : /* @__PURE__ */ React.createElement("div", { className: "space-y-2.5" }, items.map((b) => /* @__PURE__ */ React.createElement("button", { key: b.id, onClick: () => setScreen({ name: "item-form", item: b }), className: "w-full text-left bg-white rounded-2xl border border-stone-100 p-3 flex items-center gap-3 active:scale-[0.99] transition" }, /* @__PURE__ */ React.createElement("div", { className: "w-11 h-11 rounded-xl bg-stone-100 flex items-center justify-center shrink-0 overflow-hidden" }, b.gambar ? /* @__PURE__ */ React.createElement("img", { src: b.gambar, alt: "", className: "w-full h-full object-cover" }) : /* @__PURE__ */ React.createElement(Package, { size: 18, className: "text-stone-300" })), /* @__PURE__ */ React.createElement("div", { className: "min-w-0 flex-1" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-stone-700 truncate" }, b.nama), b.barcode && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 truncate" }, "#", b.barcode)), /* @__PURE__ */ React.createElement("span", { className: `px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap ${b.stok === 0 ? "bg-rose-500 text-white" : "bg-rose-50 text-rose-500"}` }, "Stok ", b.stok))))));
 }
 
