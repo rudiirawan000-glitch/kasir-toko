@@ -126,7 +126,15 @@ window.addEventListener("error", function (e) {
  .dashboard-layout .dashboard-shortcuts { grid-template-rows:repeat(2,minmax(210px,1fr)); }
 }
 </style>
-</head>
+<style>
+@media screen and (min-width:1024px) {
+ .desktop-sidebar > div:first-child { gap:12px; padding:25px 19px; }
+ .shop-brand-logo { width:54px; height:54px; flex-shrink:0; filter:drop-shadow(0 4px 7px #0002); }
+ .shop-brand-copy { min-width:0; }
+ .desktop-sidebar .shop-brand-copy > p:first-child { font-size:23px; line-height:1.2; }
+ .desktop-sidebar .shop-brand-subtitle { color:#a6b7d0; font-size:12px; font-weight:400; margin-top:4px; }
+}
+</style></head>
 <body>
 <div id="root">
   <div style="display:flex;align-items:center;justify-content:center;height:100%;font-family:sans-serif;color:#999;">Memuat...</div>
@@ -294,6 +302,22 @@ function TopBar({ title, onBack, right }) {
 function Toast({ msg }) {
   if (!msg) return null;
   return /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-stone-900 text-white text-sm px-4 py-2.5 rounded-full shadow-lg animate-[fadeIn_0.2s_ease]" }, msg);
+}
+function TokoLogo() {
+ const h = React.createElement;
+ return h("svg", {className:"shop-brand-logo", width:56, height:56, viewBox:"0 0 64 64", fill:"none", role:"img", "aria-label":"Logo toko"},
+  h("rect", {x:7,y:24,width:50,height:34,rx:6,fill:"#DBEAFE"}),
+  h("rect", {x:11,y:26,width:42,height:28,rx:3,fill:"#F8FAFC"}),
+  h("path", {d:"M13 7H51L59 22H5L13 7Z",fill:"#3B82F6"}),
+  h("path", {d:"M21 7H29L27 22H15L21 7ZM37 7H45L49 22H37V7Z",fill:"#60A5FA"}),
+  h("path", {d:"M5 22H17V26C17 30 5 30 5 26V22ZM29 22H41V26C41 30 29 30 29 26V22ZM53 22H59V26C59 30 53 30 53 26V22Z",fill:"#1D4ED8"}),
+  h("path", {d:"M17 22H29V26C29 30 17 30 17 26V22ZM41 22H53V26C53 30 41 30 41 26V22Z",fill:"#60A5FA"}),
+  h("rect", {x:17,y:35,width:13,height:23,rx:2,fill:"#2563EB"}),
+  h("rect", {x:36,y:35,width:13,height:12,rx:2,fill:"#93C5FD"}),
+  h("path", {d:"M42.5 35V47M36 41H49",stroke:"#EFF6FF",strokeWidth:2}),
+  h("circle", {cx:26,cy:47,r:1.5,fill:"white"}),
+  h("rect", {x:4,y:56,width:56,height:4,rx:2,fill:"#3B82F6"})
+ );
 }
 function KasirApp() {
   const [session, setSession] = useState(void 0);
@@ -466,7 +490,7 @@ function KasirApp() {
           #root *, #root *::before, #root *::after { position: static !important; overflow: visible !important; max-height: none !important; box-shadow: none !important; }
           #root [class*="bg-black"] { background: transparent !important; }
         }
-      `), /* @__PURE__ */ React.createElement("div", { className: "desktop-sidebar hidden lg:flex flex-col w-60 shrink-0 h-full text-white", style: { background: "#0f172a" } }, /* @__PURE__ */ React.createElement("div", { className: "px-5 py-6 flex items-center gap-2.5 border-b border-white/10" }, /* @__PURE__ */ React.createElement("div", { className: "w-9 h-9 rounded-xl flex items-center justify-center shrink-0", style: { background: BRAND.bg } }, /* @__PURE__ */ React.createElement(Store, { size: 18 })), /* @__PURE__ */ React.createElement("p", { className: "font-bold text-sm truncate" }, data.toko.nama || "Kasir Toko")), /* @__PURE__ */ React.createElement("div", { className: "flex-1 py-4 px-3 space-y-1" }, [
+      `), /* @__PURE__ */ React.createElement("div", { className: "desktop-sidebar hidden lg:flex flex-col w-60 shrink-0 h-full text-white", style: { background: "#0f172a" } }, /* @__PURE__ */ React.createElement("div", { className: "px-5 py-6 flex items-center gap-2.5 border-b border-white/10" }, React.createElement(TokoLogo), React.createElement("div", { className: "shop-brand-copy" }, React.createElement("p", { className: "font-bold text-sm truncate" }, data.toko.nama || "Kasir Toko"), React.createElement("p", { className: "shop-brand-subtitle" }, "Kasir Toko"))), /* @__PURE__ */ React.createElement("div", { className: "flex-1 py-4 px-3 space-y-1" }, [
     { id: "dashboard", label: "Beranda", icon: Store },
     { id: "pos", label: "Transaksi", icon: ShoppingCart },
     { id: "riwayat", label: "Riwayat", icon: History },
