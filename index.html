@@ -243,6 +243,81 @@ window.addEventListener("error", function (e) {
  @media(prefers-reduced-motion:reduce){.dashboard-layout .dashboard-shortcuts button{transition:none;}.dashboard-layout .dashboard-shortcuts button:hover{transform:none;}}
 }
 </style>
+<style id="desktop-compact-vivid">
+@media screen and (min-width:1024px) {
+ .dashboard-layout {padding:18px 22px;gap:16px;}
+ .dashboard-layout .dashboard-header h1 {font-size:26px;}
+ .dashboard-layout .dashboard-header p {margin-bottom:3px;}
+ .dashboard-layout .dashboard-stats > div {padding:14px 17px;}
+ .dashboard-layout .dashboard-stats p:first-child {font-size:25px;}
+ .dashboard-layout .dashboard-stats p:nth-child(3) {margin-top:4px;}
+ .dashboard-layout .dashboard-main {gap:16px;}
+ .dashboard-layout .dashboard-menu {padding:18px;}
+ .dashboard-layout .desktop-menu-subtitle {margin-bottom:14px;}
+ .dashboard-layout .dashboard-shortcuts {grid-template-rows:repeat(2,minmax(150px,1fr));gap:12px;}
+ .dashboard-layout .dashboard-shortcuts button {min-height:150px;padding:17px;gap:12px;border:0;background:linear-gradient(135deg,var(--vivid-start),var(--vivid-end));box-shadow:0 6px 16px #152c4b15;}
+ .dashboard-shortcuts button:nth-child(1){--vivid-start:#2877ef;--vivid-end:#1d4ed8;}
+ .dashboard-shortcuts button:nth-child(2){--vivid-start:#10a779;--vivid-end:#047857;}
+ .dashboard-shortcuts button:nth-child(3){--vivid-start:#9862ed;--vivid-end:#6d28d9;}
+ .dashboard-shortcuts button:nth-child(4){--vivid-start:#e59319;--vivid-end:#b65b09;}
+ .dashboard-shortcuts button:nth-child(5){--vivid-start:#e3488e;--vivid-end:#be185d;}
+ .dashboard-shortcuts button:nth-child(6){--vivid-start:#0bacc3;--vivid-end:#087a91;}
+ .dashboard-layout .dashboard-shortcuts button:hover {background:linear-gradient(135deg,var(--vivid-start),var(--vivid-end));filter:brightness(1.06);transform:translateY(-2px);}
+ .dashboard-layout .desktop-menu-icon {width:64px;height:64px;background:#ffffff22;color:white;box-shadow:inset 0 0 0 1px #ffffff22;}
+ .dashboard-layout .desktop-menu-icon svg {width:35px;height:35px;}
+ .dashboard-layout .desktop-menu-label {font-size:15px;color:white;}
+ .dashboard-layout .desktop-menu-description {color:#fff;opacity:.9;font-size:11px;line-height:1.45;}
+ .dashboard-layout .desktop-menu-arrow {color:white;background:#ffffff22;right:13px;bottom:19px;}
+ .desktop-menu-copy {padding-right:14px;gap:5px;}
+ .dashboard-layout .dashboard-stats > div {background:var(--strong-stat-bg) !important;border-color:var(--strong-stat-border) !important;}
+ .dashboard-stats > div:nth-child(1){--strong-stat-bg:#dbeafe;--strong-stat-border:#bdd4fc;}
+ .dashboard-stats > div:nth-child(2){--strong-stat-bg:#d1fae5;--strong-stat-border:#a7dfc5;}
+ .dashboard-stats > div:nth-child(3){--strong-stat-bg:#ffedcc;--strong-stat-border:#efd3a3;}
+ .dashboard-stats > div:nth-child(4){--strong-stat-bg:#ede0ff;--strong-stat-border:#d7bff8;}
+ .dashboard-layout .dashboard-transactions,.dashboard-layout .dashboard-stock {padding:15px;}
+ .dashboard-layout .dashboard-main > div:last-child {gap:14px;}
+ .dashboard-layout .dashboard-transactions > div:first-child,.dashboard-layout .dashboard-stock > div:first-child {margin-bottom:9px;}
+ .dashboard-layout .dashboard-transactions thead {background:#dceaff;}
+ .dashboard-layout .dashboard-stock thead {background:#ffe9c2;}
+ .dashboard-layout .dashboard-main th {padding:7px;color:#375d8d;}
+ .dashboard-layout .dashboard-main td {padding-top:6px;padding-bottom:6px;}
+}
+@media screen and (min-width:1280px) and (min-height:600px) {
+ .dashboard-layout {height:100dvh;min-height:0;display:grid;grid-template-rows:auto auto minmax(0,1fr);}
+ .dashboard-layout .dashboard-main {height:100%;min-height:0;align-items:stretch;}
+ .dashboard-layout .dashboard-main > div:first-child {min-height:0;}
+ .dashboard-layout .dashboard-menu {min-height:0;}
+ .dashboard-layout .dashboard-shortcuts {min-height:0;grid-template-rows:repeat(2,minmax(0,1fr));}
+ .dashboard-layout .dashboard-shortcuts button {min-height:0;}
+ .dashboard-layout .dashboard-main > div:last-child {min-height:0;}
+ .dashboard-layout .dashboard-main > div:last-child > div {flex:1;min-height:0;display:flex;flex-direction:column;}
+ .dashboard-layout .dashboard-transactions > .overflow-x-auto,.dashboard-layout .dashboard-stock > .overflow-x-auto {min-height:0;overflow-y:auto;flex:1;}
+ .dashboard-layout .dashboard-stock > p:last-child {flex-shrink:0;}
+}
+@media screen and (min-width:1280px) and (min-height:600px) and (max-height:800px) {
+ .dashboard-layout {padding:12px 18px;gap:10px;}
+ .dashboard-layout .dashboard-header h1 {font-size:22px;}
+ .dashboard-layout .dashboard-header button {padding:10px 16px;}
+ .dashboard-layout .dashboard-stats > div {padding:10px 14px;}
+ .dashboard-layout .dashboard-stats > div > div:first-child {width:35px;height:35px;}
+ .dashboard-layout .dashboard-stats p:nth-child(3) {display:none;}
+ .dashboard-layout .dashboard-menu {padding:14px;}
+ .dashboard-layout .dashboard-menu > p:first-child {font-size:17px;}
+ .dashboard-layout .desktop-menu-subtitle {font-size:11px;margin-bottom:10px;}
+ .dashboard-layout .dashboard-shortcuts {gap:10px;}
+ .dashboard-layout .dashboard-shortcuts button {padding:12px;gap:8px;}
+ .dashboard-layout .desktop-menu-icon {width:48px;height:48px;}
+ .dashboard-layout .desktop-menu-icon svg {width:28px;height:28px;}
+ .dashboard-layout .desktop-menu-label {font-size:13px;}
+ .dashboard-layout .desktop-menu-description {font-size:10px;}
+ .dashboard-layout .dashboard-transactions,.dashboard-layout .dashboard-stock {padding:10px 12px;}
+ .dashboard-layout .dashboard-main > div:last-child {gap:10px;}
+ .dashboard-layout .dashboard-main td {padding-top:3px;padding-bottom:3px;font-size:11px;}
+ .dashboard-layout .dashboard-main th {padding-top:5px;padding-bottom:5px;}
+ .dashboard-layout .dashboard-stock td .w-7 {width:22px;height:22px;}
+ .dashboard-layout .dashboard-stock > p:last-child {padding-top:4px;font-size:10px;}
+}
+</style>
 </head>
 <body>
 <div id="root">
