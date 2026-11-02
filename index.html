@@ -452,6 +452,9 @@ async function loadAll(userId) {
   } catch (e) {
     console.error("loadAll failed", e);
   }
+  const mirrored=await sb.rpc("kasir_synced_receipts");
+  if(!mirrored.error)out.transaksi=mergeServiceTransactions(out.transaksi,mirrored.data);
+  else if(mirrored.error.code!=="PGRST202")throw mirrored.error;
   return out;
 }
 async function saveKey(userId, key, value) {
@@ -558,6 +561,7 @@ function KasirApp() {
   const [authView, setAuthView] = useState("login");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [accountLoadError,setAccountLoadError]=useState("");
   const [tab, setTab] = useState("dashboard");
   const [screen, setScreen] = useState(null);
   const [cart, setCart] = useState([]);
@@ -584,7 +588,8 @@ function KasirApp() {
   const restoredItemUserRef=React.useRef(null);
   const accountUserId=session?.user?.id||null;
   const loadAccountData = useCallback(async (userId) => {
-    setLoading(true);
+    setLoading(true);setAccountLoadError("");
+    try {
     const loaded = await loadAll(userId);
     let needsSeed = !loaded.barang || !loaded.toko;
     let merged = { ...loaded };
@@ -610,6 +615,7 @@ function KasirApp() {
     if(restoredItemUserRef.current!==userId){restoredItemUserRef.current=userId;try{const route=JSON.parse(sessionStorage.getItem('kasir:item-route:'+userId)||'null');if(route){const target={name:'item-form',item:route.itemId?merged.barang.find(v=>String(v.id)===String(route.itemId)):null,defaultJenis:route.defaultJenis||'barang'};if(!route.itemId||target.item){screenStackRef.current=[{name:'item-list'}];setScreen(merged.security?.lock_item_menu&&merged.security?.pin?{name:'pin-gate',target}:target);}}}catch(e){}}
     setData(merged);
     setLoading(false);
+    }catch(e){setAccountLoadError(e.message||"Bukti pembayaran belum dapat dimuat");setLoading(false);}
   }, []);
   useEffect(() => {
     if (session && session.user) {
@@ -667,6 +673,7 @@ function KasirApp() {
   if (authView === "reset") {
     return /* @__PURE__ */ React.createElement(ResetPasswordScreen, { notify, onDone: () => setAuthView("login") });
   }
+  if(session?.user&&!loading&&accountLoadError)return React.createElement("div",{className:"p-6 max-w-xl mx-auto space-y-4"},React.createElement("p",{role:"alert"},"Data belum dapat dimuat lengkap: "+accountLoadError),React.createElement("button",{onClick:()=>loadAccountData(session.user.id),className:"bg-blue-700 text-white rounded-xl p-3"},"Coba lagi"),React.createElement("button",{onClick:logout,className:"border rounded-xl p-3"},"Keluar"));
   if (!session || !session.user || loading || !data) {
     if (session && session.user && (loading || !data)) {
       return /* @__PURE__ */ React.createElement("div", { className: "h-full w-full flex items-center justify-center", style: { background: BRAND.cream } }, /* @__PURE__ */ React.createElement("div", { className: "text-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-10 h-10 border-4 border-stone-200 rounded-full animate-spin mx-auto mb-3", style: { borderTopColor: BRAND.bg } }), /* @__PURE__ */ React.createElement("p", { className: "text-stone-400 text-sm" }, "Memuat data toko...")));
@@ -2011,21 +2018,26 @@ function ServisHpScreen({ ctx, onBack }) {
   return /* @__PURE__ */ React.createElement("div", { className: "pb-6" }, /* @__PURE__ */ React.createElement(TopBar, { title: "Servis HP", onBack }), /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-xl flex items-center px-3 py-2.5 gap-2 border border-stone-200 mb-3" }, /* @__PURE__ */ React.createElement(Search, { size: 16, className: "text-stone-400" }), /* @__PURE__ */ React.createElement("input", { value: q, onChange: (e) => setQ(e.target.value), placeholder: "Cari nomor servis, nama, atau HP...", className: "outline-none text-sm flex-1" })), loading && /* @__PURE__ */ React.createElement("div", { className: "py-16 flex flex-col items-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-8 h-8 border-4 border-stone-200 rounded-full animate-spin mb-3", style: { borderTopColor: BRAND.bg } }), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-400" }, "Mengambil data dari Servis HP...")), !loading && errorMsg && /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 border border-rose-200 bg-rose-50" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-rose-600 mb-1" }, "Gagal memuat data"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-rose-500" }, errorMsg)), !loading && !errorMsg && /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-stone-100 divide-y divide-stone-100 overflow-hidden" }, filtered.map((s) => /* @__PURE__ */ React.createElement("button", { key: s.id, onClick: () => setScreen({ name: "servis-hp-detail", trxId: s.id }), className: "w-full text-left px-4 py-3.5" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-1" }, /* @__PURE__ */ React.createElement("p", { className: "text-sm font-bold text-stone-700" }, "#", s.service_number), /* @__PURE__ */ React.createElement(Badge, { tone: servisStatusTone(s.status) }, SERVIS_STATUS_LABEL[s.status] || s.status || "-")), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-stone-600" }, s.customer_name, " \xB7 ", s.customer_phone), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 mt-0.5" }, s.device_brand, " ", s.device_model, " \xB7 ", fmtDate(s.created_at)), s.complaint && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-stone-400 mt-1 truncate" }, "Keluhan: ", s.complaint))), filtered.length === 0 && /* @__PURE__ */ React.createElement(EmptyState, { icon: Wrench, title: "Belum ada data servis", hint: q ? "Coba kata kunci lain" : "" }))));
 }
 
+
+function mergeServiceTransactions(base, synced) {
+ const map=new Map((base||[]).map(t=>[String(t.service_payment_id||t.id),t]));
+ for(const t of synced||[])map.set(String(t.service_payment_id||t.id),t);
+ return [...map.values()].sort((a,b)=>String(a.tanggal||'').localeCompare(String(b.tanggal||'')));
+}
+async function callServiceBridge(action,request) {
+ const session=await sb.auth.getSession();if(session.error||!session.data.session)throw Error('Silakan login kembali.');
+ const response=await fetch('https://qhuiuzgfemyeyjqyjurv.supabase.co/functions/v1/kasir-service-payment',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.data.session.access_token,'apikey':SERVIS_KEY},body:JSON.stringify({action,request})});
+ let result;try{result=await response.json();}catch(e){throw Error('Penghubung pembayaran belum tersedia. Periksa deployment Edge Function.');}
+ if(!response.ok||result.error)throw Error(result.error||'Pembayaran belum dapat dipastikan. Ulangi permintaan yang sama.');
+ return result;
+}
 function serviceBalanceInfo(service, transactions) {
- const total=Number(service.total_cost);
- const dp=Number(service.down_payment||0);
- if(!Number.isFinite(total)||total<=0||!Number.isFinite(dp)||dp<0||dp>total) throw Error('Biaya servis belum valid. Periksa aplikasi Servis HP.');
- const explicit=service.remaining_balance;
- const source=explicit===null||explicit===undefined||explicit===''?Math.max(0,total-dp):Number(explicit);
- if(!Number.isFinite(source)||source<0||source>total)throw Error('Sisa tagihan sumber tidak valid. Periksa aplikasi Servis HP.');
- const signature=JSON.stringify([total,dp,source]);
- const rows=transactions.filter(t=>t.service_payment===true&&String(t.service_id)===String(service.id));
- const legacy=transactions.some(t=>!t.service_payment&&(t.keterangan==='Servis #'+service.service_number||(t.items||[]).some(i=>String(i.barang_id)==='servis-'+service.id)));
- if(legacy)throw Error('Ada pembayaran servis versi lama. Cocokkan pembayaran lama dengan aplikasi Servis HP sebelum mencatat pembayaran baru.');
- if(rows.some(t=>t.service_source_signature!==signature))throw Error('Tagihan di aplikasi Servis HP berubah. Cocokkan pembayaran kasir dan sumber terlebih dahulu agar tidak dihitung dua kali.');
- const paid=rows.reduce((sum,t)=>sum+Number(t.bayar||0),0);
- if(!Number.isFinite(paid)||paid<0||paid>source)throw Error('Riwayat pembayaran tidak sesuai tagihan. Perlu pemeriksaan pemilik.');
- return {total,dp,source,signature,paid,remaining:Math.max(0,source-paid)};
+ const total=Number(service.total_cost),dp=Number(service.down_payment||0),source=Number(service.remaining_balance);
+ if(!Number.isFinite(total)||total<=0||!Number.isFinite(dp)||dp<0||dp>total||service.remaining_balance==null||!Number.isFinite(source)||source<0||source>total)throw Error('Biaya / saldo Servis HP belum valid.');
+ const rows=transactions.filter(t=>t.service_payment&&String(t.service_id)===String(service.id));
+ const legacy=transactions.some(t=>String(t.service_id)===String(service.id)&&t.service_sync_status!=='synced'||!t.service_payment&&(t.keterangan==='Servis #'+service.service_number||(t.items||[]).some(i=>String(i.barang_id)==='servis-'+service.id)));
+ if(legacy)throw Error('Ada pembayaran kasir lama yang belum tersinkron. Cocokkan dahulu; jangan membayar ulang.');
+ return {total,dp,source,remaining:source,paid:rows.filter(t=>t.service_sync_status==='synced').reduce((sum,t)=>sum+Number(t.bayar||0),0),signature:JSON.stringify([total,dp,source])};
 }
 function servicePaymentStatus(trx) { return trx.service_payment ? Number(trx.service_remaining_after)===0 : (trx.status_bayar===undefined ? Number(trx.bayar||0)>=Number(trx.total||0) : Number(trx.status_bayar)===1); }
 async function readServiceLedger() {
@@ -2033,51 +2045,30 @@ async function readServiceLedger() {
  const userId=user.data.user.id;
  const r=await sb.from('kasir_data').select('value').eq('user_id',userId).eq('key','transaksi').single();
  if(r.error)throw r.error;if(!Array.isArray(r.data.value))throw Error('Data transaksi tidak valid.');
- return {userId,transactions:r.data.value};
+ const canonical=await sb.rpc('kasir_synced_receipts');if(canonical.error)throw canonical.error;
+ return {userId,transactions:mergeServiceTransactions(r.data.value,canonical.data)};
 }
 async function recordServicePayment(request) {
- if(!Number.isSafeInteger(request.amount)||request.amount<=0)throw Error('Isi nominal pembayaran dalam rupiah, lebih dari nol.');
- for(let attempt=0;attempt<3;attempt++) {
-  const ledger=await readServiceLedger();
-  const old=ledger.transactions.find(t=>t.service_payment_id===request.id);
-  if(old) {if(String(old.service_id)!==String(request.serviceId))throw Error('ID pembayaran tidak sesuai servis.');return {trx:old,transactions:ledger.transactions};}
-  const methods=await sb.from('kasir_data').select('value').eq('user_id',ledger.userId).eq('key','metode_bayar').single();
-  if(methods.error)throw methods.error;
-  if(!Array.isArray(methods.data.value)||!methods.data.value.some(m=>String(m.id)===String(request.methodId)))throw Error('Pilih metode pembayaran yang valid.');
-  const fresh=await sbServis.from('services_kasir_view').select('*').eq('id',request.serviceId).single();
-  if(fresh.error)throw fresh.error;
-  const service=fresh.data;const info=serviceBalanceInfo(service,ledger.transactions);
-  if(info.signature!==request.signature)throw Error('Tagihan sumber berubah. Tutup dan buka kembali detail servis.');
-  if(request.amount>info.remaining)throw Error('Pembayaran melebihi sisa tagihan '+rupiah(info.remaining)+'.');
-  const remaining=info.remaining-request.amount;
-  const trx={id:request.id,kode:'SRV-'+request.id,tanggal:new Date().toISOString(),pelanggan_id:null,pelanggan_nama:service.customer_name||'Umum',mekanik_id:null,mekanik_nama:service.technician_name||'',metode_bayar_id:request.methodId,
-   items:[{barang_id:null,nama:('Pembayaran servis '+(service.device_brand||'')+' '+(service.device_model||'')).trim(),harga:request.amount,qty:1,satuan:'jasa',mode:'eceran',subtotal:request.amount}],diskon:0,total:request.amount,bayar:request.amount,
-   profit:null,profit_status:'unknown_cost',status_bayar:remaining===0?1:0,service_payment:true,service_payment_id:request.id,service_id:service.id,service_number:service.service_number,
-   service_total:info.total,service_source_signature:info.signature,service_source_remaining:info.source,service_source_dp:info.dp,service_remaining_before:info.remaining,service_remaining_after:remaining,service_sync_status:'pending',
-   keterangan:'Servis #'+service.service_number+' · '+(remaining===0?'Lunas di kasir':'Cicilan / belum lunas')+' · Belum sinkron ke aplikasi Servis HP'};
-  const next=[...ledger.transactions,trx];
-  const saved=await sb.rpc('kasir_append_service_payment',{p_expected:ledger.transactions,p_transaction:trx});
-  if(saved.error){if(saved.error.code==='PGRST202')throw Error('Aktifkan fungsi pembayaran dengan menjalankan pembayaran-servis.sql di Supabase kasir terlebih dahulu.');throw saved.error;}
-  if(saved.data?.status==='saved')return {trx:saved.data.transaction,transactions:next};
-  if(saved.data?.status==='existing'){const current=await readServiceLedger();return {trx:saved.data.transaction,transactions:current.transactions};}
- }
- throw Error('Data berubah dari perangkat lain. Periksa riwayat lalu coba lagi.');
+ const expected=JSON.parse(request.signature||'null');
+ const result=await callServiceBridge('pay',{...request,expectedRemaining:request.expectedRemaining??expected?.[2]});
+ const ledger=await readServiceLedger();
+ return {trx:result.trx,transactions:ledger.transactions};
 }
 function ServicePaymentReceipt({ctx,onBack,trx}) {
  const h=React.createElement;const method=(ctx.data.metode_bayar||[]).find(m=>m.id===trx.metode_bayar_id);
  return h('div',{className:'p-5 max-w-2xl mx-auto'},h('div',{className:'print:hidden flex gap-3 mb-5'},h('button',{onClick:onBack,className:'border rounded-xl px-4 py-2'},'Kembali'),h('button',{onClick:()=>window.print(),className:'bg-blue-700 text-white rounded-xl px-4 py-2'},'Cetak struk'),h('button',{onClick:()=>ctx.setScreen({name:'servis-hp-detail',trxId:trx.service_id}),className:'border rounded-xl px-4 py-2'},'Detail / Bayar sisa')),
- h('div',{className:'bg-white border rounded-2xl p-5 space-y-3'},h('h1',{className:'text-xl font-bold'},ctx.data.toko.nama||'Kasir Toko'),h('h2',{className:'font-bold'},'BUKTI PEMBAYARAN SERVIS'),h('p',{className:'text-xs break-all'},trx.kode),h('p',null,fmtDate(trx.tanggal)),h('p',null,'Nomor servis: '+trx.service_number),h('p',null,'Pelanggan: '+trx.pelanggan_nama),h('p',null,'Biaya servis: '+rupiah(trx.service_total)),h('p',null,'Sisa sebelum pembayaran ini: '+rupiah(trx.service_remaining_before)),h('p',{className:'text-xl font-bold'},'Dibayar sekarang: '+rupiah(trx.bayar)),h('p',{className:'font-bold'},'Sisa tagihan di kasir: '+rupiah(trx.service_remaining_after)),h('p',null,'Status: '+(servicePaymentStatus(trx)?'LUNAS DI KASIR':'DP / BELUM LUNAS')),h('p',null,'Metode: '+(method?.nama||'-')),h('p',{className:'text-sm text-amber-800'},'Pembayaran ini tercatat di kasir. Saldo aplikasi Servis HP belum diperbarui otomatis.')));
+ h('div',{className:'bg-white border rounded-2xl p-5 space-y-3'},h('h1',{className:'text-xl font-bold'},ctx.data.toko.nama||'Kasir Toko'),h('h2',{className:'font-bold'},'BUKTI PEMBAYARAN SERVIS'),h('p',{className:'text-xs break-all'},trx.kode),h('p',null,fmtDate(trx.tanggal)),h('p',null,'Nomor servis: '+trx.service_number),h('p',null,'Pelanggan: '+trx.pelanggan_nama),h('p',null,'Biaya servis: '+rupiah(trx.service_total)),h('p',null,'Sisa sebelum pembayaran ini: '+rupiah(trx.service_remaining_before)),h('p',{className:'text-xl font-bold'},'Dibayar sekarang: '+rupiah(trx.bayar)),h('p',{className:'font-bold'},'Sisa tagihan di kasir: '+rupiah(trx.service_remaining_after)),h('p',null,'Status: '+(servicePaymentStatus(trx)?'LUNAS DI KASIR':'DP / BELUM LUNAS')),h('p',null,'Metode: '+(method?.nama||'-')),h('p',{className:'text-sm text-amber-800'},'Pembayaran tersinkron. Sisa tagihan pada aplikasi Servis HP sudah diperbarui.')));
 }
 function ServisHpDetailScreen({ctx,onBack,trxId}) {
  const h=React.createElement;const [service,setService]=useState(null);const [transactions,setTransactions]=useState([]);const [error,setError]=useState('');const [loading,setLoading]=useState(true);const [amount,setAmount]=useState('');const [method,setMethod]=useState(ctx.data.metode_bayar?.[0]?.id??'');const [busy,setBusy]=useState(false);const busyRef=React.useRef(false);const [pending,setPending]=useState(null);const [storageKey,setStorageKey]=useState('');
- const load=async()=>{setLoading(true);setError('');try{const [remote,ledger]=await Promise.all([sbServis.from('services_kasir_view').select('*').eq('id',trxId).single(),readServiceLedger()]);if(remote.error)throw remote.error;setService(remote.data);setTransactions(ledger.transactions);const key='kasir:pending-service-payment:'+ledger.userId+':'+trxId;setStorageKey(key);const raw=localStorage.getItem(key);if(raw){let r;try{r=JSON.parse(raw);}catch(e){throw Error('Draf pembayaran tidak terbaca. Periksa riwayat sebelum melanjutkan.');}setPending(r);setAmount(String(r.amount));setMethod(r.methodId);}else{const balance=serviceBalanceInfo(remote.data,ledger.transactions);setAmount(String(balance.remaining));}}catch(e){setError(e.message);}finally{setLoading(false);}};
+ const load=async()=>{setLoading(true);setError('');try{await callServiceBridge('recover');const [remote,ledger]=await Promise.all([sbServis.from('services_kasir_view').select('*').eq('id',trxId).single(),readServiceLedger()]);if(remote.error)throw remote.error;setService(remote.data);setTransactions(ledger.transactions);const key='kasir:pending-service-payment:'+ledger.userId+':'+trxId;setStorageKey(key);const raw=localStorage.getItem(key);if(raw){let r;try{r=JSON.parse(raw);}catch(e){throw Error('Draf pembayaran tidak terbaca. Periksa riwayat sebelum melanjutkan.');}setPending(r);setAmount(String(r.amount));setMethod(r.methodId);}else{const balance=serviceBalanceInfo(remote.data,ledger.transactions);setAmount(String(balance.remaining));}}catch(e){setError(e.message);}finally{setLoading(false);}};
  useEffect(()=>{load();},[trxId]);
  let balance=null;let balanceError='';if(service){try{balance=serviceBalanceInfo(service,transactions);}catch(e){balanceError=e.message;}}
- const submit=async()=>{if(busyRef.current)return;busyRef.current=true;setBusy(true);setError('');try{if(!balance&&!pending)throw Error(balanceError||'Tagihan belum siap.');const value=Number(amount);if(!Number.isSafeInteger(value)||value<=0)throw Error('Nominal pembayaran harus lebih dari nol.');if(!pending&&value>balance.remaining)throw Error('Pembayaran melebihi sisa tagihan '+rupiah(balance.remaining)+'.');if(method==='')throw Error('Tambahkan metode pembayaran melalui menu Lainnya.');const request=pending||{id:crypto.randomUUID(),serviceId:trxId,amount:value,methodId:method,signature:balance.signature};if(!pending&&!window.confirm('Catat pembayaran '+rupiah(value)+' untuk servis #'+service.service_number+'?'))return;localStorage.setItem(storageKey,JSON.stringify(request));setPending(request);const result=await recordServicePayment(request);ctx.acceptServiceTransactions(result.transactions);try{localStorage.removeItem(storageKey);}catch(e){}setPending(null);ctx.notify('Pembayaran berhasil disimpan di kasir');ctx.setScreen({name:'trx-detail',trx:result.trx});}catch(e){setError(e.message+' Jika koneksi terputus, gunakan Periksa / ulangi pembayaran yang sama.');}finally{busyRef.current=false;setBusy(false);}};
+ const submit=async()=>{if(busyRef.current)return;busyRef.current=true;setBusy(true);setError('');try{if(!balance&&!pending)throw Error(balanceError||'Tagihan belum siap.');const value=Number(amount);if(!Number.isSafeInteger(value)||value<=0)throw Error('Nominal pembayaran harus lebih dari nol.');if(!pending&&value>balance.remaining)throw Error('Pembayaran melebihi sisa tagihan '+rupiah(balance.remaining)+'.');if(method==='')throw Error('Tambahkan metode pembayaran melalui menu Lainnya.');const request=pending||{id:crypto.randomUUID(),serviceId:trxId,amount:value,methodId:method,signature:balance.signature};if(!pending&&!window.confirm('Catat pembayaran '+rupiah(value)+' untuk servis #'+service.service_number+'?'))return;localStorage.setItem(storageKey,JSON.stringify(request));setPending(request);const result=await recordServicePayment(request);ctx.acceptServiceTransactions(result.transactions);try{localStorage.removeItem(storageKey);}catch(e){}setPending(null);ctx.notify('Pembayaran tersinkron ke Servis HP dan kasir');ctx.setScreen({name:'trx-detail',trx:result.trx});}catch(e){setError(e.message+' Jika koneksi terputus, gunakan Periksa / ulangi pembayaran yang sama.');}finally{busyRef.current=false;setBusy(false);}};
  const rows=transactions.filter(t=>t.service_payment&&String(t.service_id)===String(trxId));
  return h('div',{className:'pb-8'},h(TopBar,{title:service?'Servis #'+service.service_number:'Detail Servis',onBack:busy?undefined:onBack}),h('div',{className:'p-4 max-w-3xl mx-auto space-y-4'},loading&&h('p',null,'Memuat tagihan terbaru...'),error&&h('p',{role:'alert',className:'p-4 bg-rose-50 text-rose-700 rounded-xl'},error),!loading&&service&&h(React.Fragment,null,
  h('div',{className:'bg-white border rounded-2xl p-5 space-y-2'},h('h2',{className:'font-bold text-lg'},service.customer_name||'Umum'),h('p',null,[service.device_brand,service.device_model].filter(Boolean).join(' ')),h('p',null,service.complaint||''),h('p',null,'Status servis: '+(SERVIS_STATUS_LABEL[service.status]||service.status||'-')),h('p',null,'Teknisi: '+(service.technician_name||'-')),h('p',null,'No. HP: '+(service.customer_phone||'-')),service.imei_1&&h('p',null,'IMEI: '+service.imei_1),h('p',null,'Estimasi: '+rupiah(service.estimated_cost||0)),h('p',null,'Total biaya: '+rupiah(service.total_cost)),h('p',null,'DP pada aplikasi Servis HP: '+rupiah(service.down_payment||0)),balance&&h('p',null,'Pembayaran tambahan di kasir: '+rupiah(balance.paid)),balance&&h('p',{className:'font-bold text-xl'},'Sisa tagihan di kasir: '+rupiah(balance.remaining)),balance&&h('p',{className:balance.remaining===0?'text-emerald-700 font-bold':'text-amber-700 font-bold'},balance.remaining===0?'Lunas di kasir':'DP / belum lunas'),balanceError&&h('p',{role:'alert',className:'text-rose-700'},balanceError)),
- h('p',{className:'p-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-sm'},'Pencatatan pembayaran berlaku di kasir ini. Aplikasi Servis HP belum tersinkron otomatis. Gunakan satu akun toko untuk pembayaran servis ini dan cocokkan sebelum mencatat pembayaran di aplikasi lain. Laba belum dihitung karena biaya modal servis belum tersedia.'),
+ h('p',{className:'p-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-sm'},'Pembayaran disinkronkan ke Servis HP. Saldo diperiksa ulang oleh server. Jika koneksi terputus, ulangi permintaan yang sama. Laba belum dihitung karena biaya modal servis belum tersedia.'),
  h('section',{className:'bg-white border rounded-2xl p-5 space-y-3'},h('h2',{className:'font-bold'},pending?'Pembayaran menunggu konfirmasi':'Catat cicilan / pelunasan'),pending&&h('p',{className:'text-sm text-amber-800'},'Ada pembayaran yang belum dipastikan hasilnya. Periksa atau ulangi permintaan yang sama agar tidak tercatat dua kali.'),h('label',{htmlFor:'service-pay-amount',className:'block text-sm'},'Dibayar sekarang (Rp)'),h('input',{id:'service-pay-amount',type:'number',min:1,value:amount,disabled:busy||!!pending,onChange:e=>setAmount(e.target.value),className:'border rounded-xl p-3 w-full'}),h('label',{htmlFor:'service-pay-method',className:'block text-sm'},'Metode pembayaran'),h('select',{id:'service-pay-method',value:String(method),disabled:busy||!!pending,onChange:e=>{const m=(ctx.data.metode_bayar||[]).find(m=>String(m.id)===e.target.value);setMethod(m?.id??'');},className:'border rounded-xl p-3 w-full'},h('option',{value:''},'Pilih metode'),(ctx.data.metode_bayar||[]).map(m=>h('option',{key:m.id,value:String(m.id)},m.nama))),h('button',{onClick:submit,disabled:busy||(!pending&&(!balance||balance.remaining<=0||!ctx.data.metode_bayar?.length)),className:'bg-blue-700 text-white rounded-xl px-5 py-3 font-bold disabled:opacity-40'},busy?'Memastikan pembayaran...':pending?'Periksa / ulangi pembayaran yang sama':'Simpan pembayaran'),h('button',{onClick:load,disabled:busy,className:'border rounded-xl px-4 py-3 ml-2'},'Refresh')),
  h('section',{className:'bg-white border rounded-2xl p-5'},h('h2',{className:'font-bold mb-3'},'Riwayat pembayaran kasir'),!rows.length&&h('p',{className:'text-sm text-stone-500'},'Belum ada pembayaran servis versi baru.'),rows.map(t=>h('button',{key:t.id,onClick:()=>ctx.setScreen({name:'trx-detail',trx:t}),className:'w-full text-left border-b py-3'},h('p',{className:'font-semibold'},rupiah(t.bayar)+' · '+(servicePaymentStatus(t)?'Lunas di kasir':'Cicilan')),h('p',{className:'text-xs text-stone-500'},fmtDate(t.tanggal))))))));
 }
